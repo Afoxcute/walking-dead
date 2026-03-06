@@ -1,5 +1,6 @@
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { http } from "wagmi";
 import { defineChain } from "viem";
-import { createConfig, http } from "wagmi";
 import {
   JSON_RPC_PROVIDER,
   SOMNIA_TESTNET_CHAIN_ID,
@@ -32,9 +33,12 @@ export const somniaTestnet = defineChain({
   },
 });
 
-export const config = createConfig({
+export const config = getDefaultConfig({
+  appName: "Onchain Vampire Survivors",
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
   chains: [somniaTestnet],
   transports: {
     [somniaTestnet.id]: http(JSON_RPC_PROVIDER),
   },
+  ssr: false,
 });

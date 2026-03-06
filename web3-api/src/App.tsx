@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
-import { useConnectModal } from "@reown-app/connectkit";
-import { ConnectKitButton } from "@reown-app/connectkit";
+import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
 import { ethers } from "ethers";
 import {
   GAME_ABI,
@@ -11,7 +10,7 @@ import {
 
 export function App() {
   const { address, isConnected } = useAccount();
-  const { open: openConnectModal } = useConnectModal();
+  const { openConnectModal } = useConnectModal();
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
 
@@ -323,7 +322,7 @@ export function App() {
   return (
     <main>
       <div style={{ display: "none" }}>
-        <ConnectKitButton />
+        <ConnectButton />
         {isConnected && address && (
           <p>Somnia Testnet Account: {address}</p>
         )}

@@ -2,16 +2,22 @@
   "name": "hardhat-javascript-starter",
   "scripts": {
     "build": "npx thirdweb@latest detect",
+    "compile": "npx hardhat compile",
     "deploy": "npx thirdweb@latest deploy",
+    "deploy:somnia": "npx hardhat run scripts/deploy.js --network somniaTestnet",
     "publish": "npx thirdweb@latest publish"
   },
   "devDependencies": {
-    "@matterlabs/hardhat-zksync-solc": "^0.3.17",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.4.0",
     "hardhat": "^2.13.0"
   },
   "dependencies": {
+    "@somnia-chain/reactivity-contracts": "^0.1.6",
     "@thirdweb-dev/contracts": "^3.8.0",
     "thirdweb": "5.31.0",
     "zksync-web3": "^0.14.3"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

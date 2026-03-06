@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import { SomniaEventHandler } from "@somnia-chain/reactivity-contracts/contracts/SomniaEventHandler.sol";
+
 // Universal Account ID Struct and IUEAFactory Interface
 struct UniversalAccountId {
     string chainNamespace;
@@ -77,7 +79,7 @@ interface IUltraVerifier {
     ) external view returns (bool);
 }
 
-contract ZKGameClient is Ownable {
+contract ZKGameClient is Ownable, SomniaEventHandler {
     // 0: Gold; 1: Diamond;
     struct PriceItem {
         uint priceType;
@@ -117,7 +119,13 @@ contract ZKGameClient is Ownable {
         uint grade,
         uint reLive
     );
-    
+
+    /// @dev Emitted when the reactivity handler processes a GameLogEvent (from this or another game contract).
+    event ReactedToGameLog(address indexed emitter, address indexed player, uint256 grade);
+
+    /// @dev Number of times the Somnia reactivity handler has been invoked (for analytics / debugging).
+    uint256 public reactivityInvocationCount;
+
     // Lottery
     uint256 public totalLotteryTimes = 0;
     LotteryItem[] public LotteryItemList;
@@ -470,6 +478,26 @@ contract ZKGameClient is Ownable {
 
     function getTopListInfo() public view returns (uint[10] memory , uint[10] memory, address[10] memory, bytes32[10] memory, uint) {
         return (topGradeList, topTimeList, topPlayerList, topPlayerChainHashList, lastUpdateTime);
+    }
+
+    /// @notice Somnia reactivity: called by the chain when a subscribed event matches (e.g. GameLogEvent).
+    /// @param emitter Address of the contract that emitted the event.
+    /// @param data ABI-encoded non-indexed event parameters.
+    function _onEvent(
+        address emitter,
+        bytes32[] calldata /* eventTopics */,
+        bytes calldata data
+    ) internal override {
+        reactivityInvocationCount += 1;
+
+        // Only react to GameLogEvent-shaped payloads (same as this contract's GameLogEvent).
+        // GameLogEvent(uint256,uint256,address,uint256,uint256) - all non-indexed, so full decode from data.
+        if (data.length >= 32 * 5) {
+            (, , address player, uint256 grade, ) =
+                abi.decode(data, (uint256, uint256, address, uint256, uint256));
+            // Avoid reentrancy: do not call back into game logic; only emit a separate event.
+            emit ReactedToGameLog(emitter, player, grade);
+        }
     }
 
     function _canSetOwner() internal virtual view override returns (bool) {

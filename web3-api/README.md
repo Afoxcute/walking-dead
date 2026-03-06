@@ -20,11 +20,9 @@ Install the template using [thirdweb create](https://portal.thirdweb.com/cli/cre
 
 ## Environment Variables
 
-To run this project, you will need to add the following environment variables to your .env file:
+To run this project, add a `.env` file in `web3-api/` with:
 
-`CLIENT_ID`
-
-To learn how to create a client ID, refer to the [client documentation](https://portal.thirdweb.com/typescript/v5/client). 
+- **`VITE_WALLETCONNECT_PROJECT_ID`** (recommended): Your [WalletConnect Cloud](https://cloud.walletconnect.com/) project ID. Required for WalletConnect (mobile wallet scans, etc.). Get a free project ID at https://cloud.walletconnect.com/. If unset, a placeholder is used and WalletConnect may not work. 
 
 ## Run locally
 

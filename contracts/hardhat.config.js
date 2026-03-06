@@ -1,30 +1,19 @@
-require("@matterlabs/hardhat-zksync-solc");
+try { require("dotenv").config(); } catch (_) {}
+require("@nomicfoundation/hardhat-ethers");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  zksolc: {
-    version: "1.3.9",
-    compilerSource: "binary",
-    settings: {
-      optimizer: {
-        enabled: true,
-      },
-    },
-  },
   networks: {
     somniaTestnet: {
-      url: "https://dream-rpc.somnia.network/",
+      // RPC: https://dream-rpc.somnia.network/
+      url: process.env.RPC_URL || "https://dream-rpc.somnia.network/",
       chainId: 50312,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY.replace(/^0x/, "")] : [],
+      timeout: 120000,
     },
   },
-  paths: {
-    artifacts: "./artifacts-zk",
-    cache: "./cache-zk",
-    sources: "./contracts",
-    tests: "./test",
-  },
   solidity: {
-    version: "0.8.19",
+    version: "0.8.30",
     settings: {
       optimizer: {
         enabled: true,

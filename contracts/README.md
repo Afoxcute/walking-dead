@@ -24,7 +24,42 @@ to compile your contracts. This will also detect the [Contracts Extensions Docs]
 
 ## Deploying Contracts
 
-When you're ready to deploy your contracts, just run one of the following command to deploy you're contracts:
+### Deploy to Somnia Testnet (recommended)
+
+1. **Install dependencies**
+   ```bash
+   cd contracts
+   npm install
+   # or
+   yarn
+   ```
+
+2. **Set your deployer wallet**
+   - Create a `.env` file in the `contracts/` folder (copy from `.env.example` if present).
+   - Add your Somnia testnet wallet private key (get testnet STT from the [Somnia testnet faucet](https://testnet.somnia.network/)):
+   ```env
+   PRIVATE_KEY=your_hex_private_key_without_0x_or_with
+   ```
+   - Optional: `RPC_URL=https://dream-rpc.somnia.network/` (default is already Somnia testnet).
+
+3. **Compile**
+   ```bash
+   npm run compile
+   # or
+   yarn compile
+   ```
+
+4. **Deploy**
+   ```bash
+   npm run deploy:somnia
+   # or
+   yarn deploy:somnia
+   ```
+   The script will print the deployed `ZKGameClient` address. Set that as `GAME_CONTRACT_ADDRESS` in `web3-api/src/config.ts`.
+
+### Deploy via Thirdweb CLI
+
+You can also use the Thirdweb dashboard/CLI (if your target chain is configured there):
 
 ```bash
 npm run deploy
