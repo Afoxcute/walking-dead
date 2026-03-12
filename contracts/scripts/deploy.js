@@ -1,4 +1,8 @@
 const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
+
+const DEPLOYMENTS_PATH = path.join(__dirname, "..", "deployments", "somnia.json");
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
@@ -16,9 +20,15 @@ async function main() {
   const address = await game.getAddress();
   console.log("ZKGameClient deployed to:", address);
 
+  const dir = path.dirname(DEPLOYMENTS_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(DEPLOYMENTS_PATH, JSON.stringify({ ZKGameClient: address }, null, 2));
+  console.log("Saved address to", DEPLOYMENTS_PATH);
+
   console.log("\nNext steps:");
-  console.log("1. Update web3-api .env or config: GAME_CONTRACT_ADDRESS =", address);
-  console.log("2. (Optional) Create Somnia reactivity subscription - see contracts/REACTIVITY.md");
+  console.log("1. npm run call-gameover  (uses this address automatically)");
+  console.log("2. Update web3-api/src/config.ts: GAME_CONTRACT_ADDRESS =", address);
+  console.log("3. (Optional) Create Somnia reactivity subscription - see contracts/REACTIVITY.md");
 }
 
 main()

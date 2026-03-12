@@ -78,6 +78,13 @@ export default class UILoadingPage extends UIPage {
             if (this._wallet_name.getComponent(cc.Label).string !== account) {
               this._wallet_name.getComponent(cc.Label).string = account;
             }
+            if (this._wallet_icon) {
+              const sp = this._wallet_icon.getComponent(cc.Sprite);
+              if (sp) {
+                const frame = cocosz.resMgr.getRes("somnia_logo", cc.SpriteFrame);
+                if (frame) sp.spriteFrame = frame;
+              }
+            }
           } else {
             this._BtnLogin.active = true;
             this._BtnWallet.active = false;

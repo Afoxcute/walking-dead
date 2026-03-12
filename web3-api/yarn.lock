@@ -1512,6 +1512,11 @@
     rpc-websockets "^9.0.2"
     superstruct "^2.0.2"
 
+"@somnia-chain/reactivity@^0.1.9":
+  version "0.1.10"
+  resolved "https://registry.yarnpkg.com/@somnia-chain/reactivity/-/reactivity-0.1.10.tgz#e3e81147a1d8b3d25bd9e6098b7aa0efeffdbd38"
+  integrity sha512-QfHeVHzcLGmE5FDS8UI6FZcHEMTXmxhuGXHJ06dwzLRoG6RwliJ55iuL2CiOf0O2b/k+Tda09fPB8B53Sk6Mww==
+
 "@swc/helpers@^0.5.11":
   version "0.5.17"
   resolved "https://registry.npmmirror.com/@swc/helpers/-/helpers-0.5.17.tgz#5a7be95ac0f0bf186e7e6e890e7a6f6cda6ce971"

@@ -5,6 +5,7 @@
     "compile": "npx hardhat compile",
     "deploy": "npx thirdweb@latest deploy",
     "deploy:somnia": "npx hardhat run scripts/deploy.js --network somniaTestnet",
+    "call-gameover": "npx hardhat run scripts/call-gameover.js --network somniaTestnet",
     "publish": "npx thirdweb@latest publish"
   },
   "devDependencies": {

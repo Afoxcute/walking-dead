@@ -2,10 +2,12 @@
 // Canonical RPC: https://dream-rpc.somnia.network/
 export const SOMNIA_TESTNET_CHAIN_ID = 50312;
 export const JSON_RPC_PROVIDER = "https://dream-rpc.somnia.network/";
+/** WebSocket RPC for reactivity off-chain subscriptions (push notifications). */
+export const SOMNIA_WSS_RPC = "wss://dream-rpc.somnia.network/";
 export const BLOCK_EXPLORER_URL = "https://shannon-explorer.somnia.network/";
 export const NATIVE_SYMBOL = "STT";
 
-export const GAME_CONTRACT_ADDRESS = "0x44e670d21Fb5da3f87512222B8EDBFb7989477B6";
+export const GAME_CONTRACT_ADDRESS = "0x468D2FCd8EBc64B885b3e8573A6e5eCE4687abAF";
 
 export const GAME_ABI = [
 	{

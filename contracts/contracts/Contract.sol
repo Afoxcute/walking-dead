@@ -412,8 +412,10 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
     function gameOver(uint time, uint kills) external {
         // TODO: zk proof
 
-        // save data
         uint logId = playerLatestGameLogIdMap[msg.sender];
+        require(gameLogMap[logId].player == msg.sender, "Call startGame first");
+
+        // save data
         gameLogMap[logId].endTime = block.timestamp;
         gameLogMap[logId].grade = time;
         pushDataToTopList(MessageItem(msg.sender,time, kills));
@@ -438,10 +440,10 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         uint kills = messageItem.kills;
         address player = messageItem.player;
 
-        (UniversalAccountId memory originAccount, bool isUEA) =
-            IUEAFactory(0x00000000000000000000000000000000000000eA).getOriginForUEA(player);
-
-        if(topGradeList[topGradeList.length -1] < kills) {
+        // Use default chain hash (e.g. Somnia/STT). Skip UEA lookup at 0xea to avoid reverts
+        // on chains where 0xea is missing or returns incompatible data.
+        bytes32 chainHash = "STT";
+        if (topGradeList[topGradeList.length -1] < kills) {
             uint left = 0;
             uint right = topGradeList.length - 1;
             uint mid;
@@ -464,13 +466,7 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
             topGradeList[left] = kills;
             topTimeList[left] = time;
             topPlayerList[left] = player;
-            if (!isUEA) {
-                // If it's a native chain EOA (isUEA = false)
-                topPlayerChainHashList[left] = "STT";
-            } else {
-                bytes32 chainHash = keccak256(abi.encodePacked(originAccount.chainNamespace, originAccount.chainId));
-                topPlayerChainHashList[left] = chainHash;
-            }
+            topPlayerChainHashList[left] = chainHash;
         }
 
         lastUpdateTime = block.timestamp;

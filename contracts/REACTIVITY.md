@@ -51,7 +51,7 @@ Subscriptions are created **off-chain** (or via the precompile). The contract on
    });
 
    // Deployed game contract address (handler)
-   const handlerContractAddress = '0xYourDeployedZKGameClientAddress';
+   const handlerContractAddress = '0x468D2FCd8EBc64B885b3e8573A6e5eCE4687abAF';
 
    // Optional: filter by GameLogEvent topic (event signature hash).
    // In viem: keccak256(toHex('GameLogEvent(uint256,uint256,address,uint256,uint256)')).
@@ -69,7 +69,61 @@ Subscriptions are created **off-chain** (or via the precompile). The contract on
    const txHash = await sdk.createSoliditySubscription(subData);
    ```
 
-4. To list or cancel subscriptions, use the SDK (e.g. `getAllSoliditySubscriptionsForOwner`, `cancelSoliditySubscription`) or the Somnia reactivity precompile at `0x0100`.
+4. To list or cancel subscriptions, use the SDK (e.g. `getSubscriptionInfo`, `cancelSoliditySubscription`) or the Somnia reactivity precompile at `0x0100`.
+
+## SDK integration (web3-api)
+
+The **web3-api** app integrates `@somnia-chain/reactivity` so the game (Cocos) and the dashboard can use subscriptions without extra tooling.
+
+### Where it lives
+
+- **Package**: `web3-api` depends on `@somnia-chain/reactivity`.
+- **Module**: `web3-api/src/reactivity.ts` — helpers for SDK, off-chain subscribe, wildcard subscribe, and on-chain create/get/cancel.
+- **Config**: `SOMNIA_WSS_RPC` in `web3-api/src/config.ts` (WebSocket URL for off-chain push).
+- **Window API** (for Cocos / in-app): set by `App.tsx` when the app loads.
+
+### Off-chain (WebSocket) subscription
+
+- **Subscribe** (with optional filters):  
+  `window.reactivitySubscribeOffChain({ wildcard: false, onData: (data) => { ... }, eventTopics: [...], onError })`  
+  Uses a WebSocket client under the hood for real-time push.
+- **Wildcard off-chain subscription** (all events):  
+  `window.reactivitySubscribeOffChain({ wildcard: true, onData: (data) => { ... }, onError })`  
+  No `eventTopics` filter; you receive every event the chain pushes.
+- **Unsubscribe**:  
+  `window.reactivityUnsubscribe()`  
+  Stops the current off-chain subscription.
+- Optional: set `window.onReactivityData = (data) => { ... }`; it is called in addition to the `onData` you pass to `reactivitySubscribeOffChain`.
+
+### On-chain (Solidity) subscription
+
+- **Create**:  
+  `window.reactivityCreateSoliditySubscription({ handlerContractAddress, priorityFeePerGas, maxFeePerGas, gasLimit, isGuaranteed, isCoalesced, eventTopics?, emitter? })`  
+  Requires connected wallet with ≥32 STT. Returns tx hash or `{ error: string }`.
+- **Get info**:  
+  `window.reactivityGetSubscriptionInfo(subscriptionId)`  
+  Returns subscription info or `undefined`.
+- **Cancel**:  
+  `window.reactivityCancelSubscription(subscriptionId)`  
+  Owner only. Returns tx hash or `{ error: string }`.
+
+### System event and cron subscriptions (SDK ≥0.1.9)
+
+From [Cron subscriptions via SDK](https://docs.somnia.network/developer/reactivity/tutorials/cron-subscriptions-via-sdk) and [System Events](https://docs.somnia.network/developer/reactivity/system-events):
+
+- **BlockTick** — Fires at the start of every block (or at a specific block if `blockNumber` is set).
+- **Schedule** — One-off cron: handler runs once at `timestampMs` (milliseconds; must be ≥12 seconds in the future). Subscription is removed after it runs.
+
+**Window API:**
+
+- **BlockTick subscription**:  
+  `window.reactivityCreateBlockTickSubscription({ handlerContractAddress, priorityFeePerGas, maxFeePerGas, gasLimit, isGuaranteed, isCoalesced, blockNumber?, handlerFunctionSelector? })`  
+  Requires connected wallet with ≥32 STT. Returns tx hash or `{ error: string }`.
+- **One-off cron (Schedule)**:  
+  `window.reactivityScheduleCronJob({ timestampMs, handlerContractAddress, priorityFeePerGas, maxFeePerGas, gasLimit, isGuaranteed, isCoalesced, handlerFunctionSelector? })`  
+  Same wallet requirement. `timestampMs` is in milliseconds (e.g. from `Date.now() + 15000` for ~15s from now).
+
+Use `reactivityGetSubscriptionInfo` / `reactivityCancelSubscription` to inspect or cancel a BlockTick subscription. Schedule jobs are one-off and are not listed after they fire.
 
 ## Deploy and compile
 

@@ -20,3 +20,10 @@
     @apply bg-zinc-950 text-neutral-200;
   }
 }
+
+/* Ensure RainbowKit modals appear above Cocos game canvas */
+[data-rk],
+[data-rk] [data-radix-popper-content-wrapper],
+[data-rk] [role="dialog"] {
+  z-index: 2147483647 !important;
+}

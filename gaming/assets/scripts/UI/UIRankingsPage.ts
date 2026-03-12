@@ -68,18 +68,12 @@ export default class UIRankingsPanel extends UIPage {
           let grade = parseInt(topGradeList[i]);
           if (grade > 0) {
             let chainHash = topPlayerChainHashList[i];
-            let chainName = "unknown";
-            // Somnia Testnet / STT (bytes32 "STT" or "Somnia")
+            let chainName = "unknown"
             if (
               chainHash ===
               "0x5354540000000000000000000000000000000000000000000000000000000000"
             ) {
               chainName = "STT";
-            } else if (
-              chainHash ===
-              "0x536f6d6e69610000000000000000000000000000000000000000000000000000"
-            ) {
-              chainName = "Somnia";
             } else if (
               chainHash ===
               "0x5055534800000000000000000000000000000000000000000000000000000000"
@@ -145,27 +139,19 @@ export default class UIRankingsPanel extends UIPage {
           let chainName = rankingsList[i].chainName;
 
           switch(chainName) {
-            case "Ethereum":
-              instance.getChildByName("icon").getComponent(
-                cc.Sprite
-              ).spriteFrame = cocosz.resMgr.getRes(
-                "ethereum_logo",
-                cc.SpriteFrame
-              );
-              break;
-            case "Somnia":
+            case "STT":
               instance.getChildByName("icon").getComponent(
                 cc.Sprite
               ).spriteFrame = cocosz.resMgr.getRes(
                 "somnia_logo",
                 cc.SpriteFrame
-              ) || cocosz.resMgr.getRes("push_logo", cc.SpriteFrame);
+              );
               break;
-            case "STT":
+            case "Ethereum":
               instance.getChildByName("icon").getComponent(
                 cc.Sprite
               ).spriteFrame = cocosz.resMgr.getRes(
-                "push_logo",
+                "ethereum_logo",
                 cc.SpriteFrame
               );
               break;

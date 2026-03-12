@@ -88,13 +88,13 @@ export default class UIHomePage extends UIPage {
       const initialScale = this._playerSkin.scale;
       cc.tween(this._playerSkin)
         .repeatForever(
-          cc.tween().parallel(
+          cc.tween(this._playerSkin).parallel(
             cc
-              .tween()
-              .by(1, { position: cc.v2(0, 6) })
-              .by(1, { position: cc.v2(0, -6) }),
+              .tween(this._playerSkin)
+              .by(1, { position: cc.v3(0, 6, 0) })
+              .by(1, { position: cc.v3(0, -6, 0) }),
             cc
-              .tween()
+              .tween(this._playerSkin)
               .to(1, { scale: initialScale * 1.01 })
               .to(1, { scale: initialScale })
           )
@@ -264,6 +264,14 @@ export default class UIHomePage extends UIPage {
       if (walletName.getComponent(cc.Label).string !== account) {
         walletName.getComponent(cc.Label).string = account;
       }
+      const walletIcon = cc.find("BtnWallet/icon", this._page);
+      if (walletIcon) {
+        const sp = walletIcon.getComponent(cc.Sprite);
+        if (sp) {
+          const frame = cocosz.resMgr.getRes("somnia_logo", cc.SpriteFrame);
+          if (frame) sp.spriteFrame = frame;
+        }
+      }
     }
   }
 
@@ -292,6 +300,14 @@ export default class UIHomePage extends UIPage {
     this._updatePlayer();
     this._updateWeapon();
     this._updateWeaponFrame();
+
+    if (this._icon_set) {
+      const sp = this._icon_set.getComponent(cc.Sprite);
+      if (sp) {
+        const frame = cocosz.resMgr.getRes("somnia_logo", cc.SpriteFrame);
+        if (frame) sp.spriteFrame = frame;
+      }
+    }
 
     cc.game.on(Constant.E_GAME_LOGIC, this._onGameMessageHandler, this);
   }
@@ -726,7 +742,7 @@ export default class UIHomePage extends UIPage {
     cc.tween(weaponNode)
       .repeatForever(
         cc
-          .tween()
+          .tween(weaponNode)
           .to(
             moveDuration,
             {
