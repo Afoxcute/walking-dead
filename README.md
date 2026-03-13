@@ -48,7 +48,7 @@ Tips: Please use chrome browser to open.
 - Players can purchase and upgrade game characters on this page. 
 - I have drawn many characters of this type, but due to time constraints, I only show four characters here.
 
-![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/g4.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g4.png?raw=true)
 
 #### 2.3 Lottery Page
 
