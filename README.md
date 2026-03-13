@@ -14,7 +14,7 @@ The game uses a unique algorithm mechanism to optimize the game value, so that p
 
 Using the introduction of the original Vampire Survivors game to explain the game values ​​of onchainVampireSurvivors: Monsters are everywhere, and you are nowhere to escape. All you can do is survive as long as possible until death inevitably ends your struggle. Collect gold in each run to buy upgrades and help the next survivor.
 
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/7.png?raw=true)
+![Alt text](https://github.com/CatKevin/Afoxcute/walking-dead/blob/main/images/7.png?raw=true)
 
 [Click to play onchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
 
