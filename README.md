@@ -7,7 +7,7 @@ I searched hard on web3 and couldn't find similar games, or even fun games. Asid
 I think only interesting web3 games are likely to be widely used, while games that rely solely on token airdrop or "play to earn" models will be difficult to maintain.
 
 ## What it does
-onchainVampireSurvivors is a time survival game with minimal gameplay and roguelite elements. It uses ThirdWeb technology to allow players to use various methods, such as commonly used social accounts (Google, Apple, Facebook), email, mobile phone number, passkey and more than 350 web3 wallets.
+onchainVampireSurvivors is a time survival game with minimal gameplay and roguelite elements. It uses Rainbowkit technology to allow players to use various methods, such as QR code, email, and more than 350 web3 wallets.
 The game uses a unique algorithm mechanism to optimize the game value, so that players can immerse themselves in a state of continuous tension and excitement. I created a specific algorithm in the smart contract and created an on-chain ranking list, which is very likely to reduce gas consumption without affecting the sorting efficiency. At the same time, I also simply implemented a unique lottery mechanism for players to draw cards.
 
 ![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/2.png?raw=true)
