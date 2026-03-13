@@ -56,7 +56,7 @@ Tips: Please use chrome browser to open.
 - A VRF random extraction function is implemented to ensure the fairness and randomness of the lottery.
 - If you want to experience the Howitzer and Gatling as soon as possible, please come and participate in our lucky draw!
 
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/5.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g5.png?raw=true)
 
 #### 2.4 Onchain ranking page
 - Here you can see the player ranking data, and you can see kills and time of each item.
