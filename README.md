@@ -24,7 +24,7 @@ Tips: Please use chrome browser to open.
 ## How to play it
 
 ### 1、Loading Scene
-- Wait for the progress bar to end, select the wallet you want to interact with or log in with your social account, and then start the game
+- Wait for the progress bar to end, select the wallet you want to interact with, and then start the game
   
 ![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g2.png?raw=true)
 
@@ -107,7 +107,7 @@ Then, combined with WebPush SDK, the smart contract was deployed to the Somnia T
 I used the Sonia reactivity and the UEAFactory smart contract to implement a full-chain game leaderboard.
 
 ## Challenges we ran into
-Due to the limitations of the game engine, I couldn't use Somnia reactivity or Web3 SDK. I think about it for a long time, about a week, and write a react project to expose the API to the game engine. It allows me to successfully complete various functions supported by Push SDK in the game engine!
+Due to the limitations of the game engine, I couldn't use Somnia reactivity or Web3 SDK. I think about it for a long time, about a week, and write a react project to expose the API to the game engine. It allows me to successfully complete various functions supported by Somnia reactivity in the game engine!
 
 ## Accomplishments that we're proud of
 - I completed most of the game logic within the time limit.
