@@ -63,7 +63,7 @@ Tips: Please use chrome browser to open.
 - At the bottom you can view the update time of the current chain's ranking.
 - This ranking list can be scrolled up and down, and currently stores the top ten data of rankings.
 
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/6.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g6.png?raw=true)
 
 ### 3、Game Scene
 - After entering the game, players can use the "W", "S", "A" and "D" keys on the computer keyboard to control the character's movement up, down, left and right.（You can see this keyboard button in the lower right corner of the page）
