@@ -1,5 +1,5 @@
 # onchainVampireSurvivors
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/gaming/assets/res/UI/common/logo.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/gaming/assets/res/UI/common/logo.png?raw=true)
 ## Inspiration
 
 I used to be obsessed with a very popular game called "Vampire Survivor" which can be played on Steam. I was addicted to this game some time ago. I would play it for at least half an hour, or even several hours each time.
