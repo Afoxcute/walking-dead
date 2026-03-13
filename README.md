@@ -34,7 +34,7 @@ Tips: Please use chrome browser to open.
 - Click the Start Game button, you need to pay 0.01 STT for the gas token, then wait for a moment and enter the game after the transaction is completed.
 - When you start the game, you need to pay 0.01 STT as the ticket fee to participate in the game, and this fee will be directly distributed to outstanding players in the current ranking as a game incentive. (If you can maintain a high ranking, it means you can earn a huge amount of STT tokens)
 
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/2.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g1.png?raw=true)
 
 #### 2.1 Weapon Page
 - Players can select, purchase and upgrade weapons on this page.
