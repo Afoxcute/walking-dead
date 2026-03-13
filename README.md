@@ -1,4 +1,4 @@
-# OnchainVampireSurvivors
+# onchainVampireSurvivors
 ![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/logo.png?raw=true)
 ## Inspiration
 
@@ -7,16 +7,16 @@ I searched hard on web3 and couldn't find similar games, or even fun games. Asid
 I think only interesting web3 games are likely to be widely used, while games that rely solely on token airdrop or "play to earn" models will be difficult to maintain.
 
 ## What it does
-OnchainVampireSurvivors is a time survival game with minimal gameplay and roguelite elements. It uses ThirdWeb technology to allow players to use various methods, such as commonly used social accounts (Google, Apple, Facebook), email, mobile phone number, passkey and more than 350 web3 wallets.
+onchainVampireSurvivors is a time survival game with minimal gameplay and roguelite elements. It uses ThirdWeb technology to allow players to use various methods, such as commonly used social accounts (Google, Apple, Facebook), email, mobile phone number, passkey and more than 350 web3 wallets.
 The game uses a unique algorithm mechanism to optimize the game value, so that players can immerse themselves in a state of continuous tension and excitement. I created a specific algorithm in the smart contract and created an on-chain ranking list, which is very likely to reduce gas consumption without affecting the sorting efficiency. At the same time, I also simply implemented a unique lottery mechanism for players to draw cards.
 
 ![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/2.png?raw=true)
 
-Using the introduction of the original Vampire Survivors game to explain the game values ​​of OnchainVampireSurvivors: Monsters are everywhere, and you are nowhere to escape. All you can do is survive as long as possible until death inevitably ends your struggle. Collect gold in each run to buy upgrades and help the next survivor.
+Using the introduction of the original Vampire Survivors game to explain the game values ​​of onchainVampireSurvivors: Monsters are everywhere, and you are nowhere to escape. All you can do is survive as long as possible until death inevitably ends your struggle. Collect gold in each run to buy upgrades and help the next survivor.
 
 ![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/7.png?raw=true)
 
-[Click to play OnchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
+[Click to play onchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
 
 Tips: Please use chrome browser to open.
 
@@ -120,7 +120,7 @@ Due to the limitations of the game engine, I couldn't use Push SDK or Web3 SDK. 
 - How to write smart contracts using a hardhat
 - How to deploy smart contracts to the Somnia Testnet
 
-## What's next for OnchainVampireSurvivors
+## What's next for onchainVampireSurvivors
 - Design more interesting game UI.
 - Improve the reward mechanism so that more top-ranked players can be reasonably allocated more rewards according to the algorithm, thereby increasing player enthusiasm.
 - Currently weapons and character skins are pre-designed. I would like to introduce generative AI technology so that players can draw or generate assets such as weapons and character skins by themselves, which will greatly increase the randomness and fun of the game.
@@ -132,4 +132,4 @@ Due to the limitations of the game engine, I couldn't use Push SDK or Web3 SDK. 
 Thank you for your patience in reading this document. It is very long and took you a lot of time! Thank you very much!
 Of course, you are welcome to try my game! Feel the joy of roguelike game!
 
-[Click to play OnchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
+[Click to play onchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)

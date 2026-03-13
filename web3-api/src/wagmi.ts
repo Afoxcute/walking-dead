@@ -34,7 +34,7 @@ export const somniaTestnet = defineChain({
 });
 
 export const config = getDefaultConfig({
-  appName: "Onchain Vampire Survivors",
+  appName: "onchainVampireSurvivors",
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
   chains: [somniaTestnet],
   transports: {
