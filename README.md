@@ -26,7 +26,7 @@ Tips: Please use chrome browser to open.
 ### 1、Loading Scene
 - Wait for the progress bar to end, select the wallet you want to interact with or log in with your social account, and then start the game
   
-![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/1.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g2.png?raw=true)
 
 ### 2、Home Scene
 - On the homepage, you can see various game data, such as the number of gold coins and diamonds, network icon, wallet address, etc., as well as game characters and weapons, and of course the scrolling background and LOGO I drew specifically for Somnia Testnet.
