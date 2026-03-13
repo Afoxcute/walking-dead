@@ -14,7 +14,7 @@ The game uses a unique algorithm mechanism to optimize the game value, so that p
 
 Using the introduction of the original Vampire Survivors game to explain the game values ​​of onchainVampireSurvivors: Monsters are everywhere, and you are nowhere to escape. All you can do is survive as long as possible until death inevitably ends your struggle. Collect gold in each run to buy upgrades and help the next survivor.
 
-![Alt text](https://github.com/CatKevin/Afoxcute/walking-dead/blob/main/images/7.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/7.png?raw=true)
 
 [Click to play onchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
 
@@ -26,7 +26,7 @@ Tips: Please use chrome browser to open.
 ### 1、Loading Scene
 - Wait for the progress bar to end, select the wallet you want to interact with or log in with your social account, and then start the game
   
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/1.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/1.png?raw=true)
 
 ### 2、Home Scene
 - On the homepage, you can see various game data, such as the number of gold coins and diamonds, network icon, wallet address, etc., as well as game characters and weapons, and of course the scrolling background and LOGO I drew specifically for Somnia Testnet.
