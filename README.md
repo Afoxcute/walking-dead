@@ -16,7 +16,7 @@ Using the introduction of the original Vampire Survivors game to explain the gam
 
 ![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/7.png?raw=true)
 
-[Click to play onchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
+[Click to play onchainVampireSurvivors](https://rococo-yeot-e15cd7.netlify.app/)
 
 Tips: Please use chrome browser to open.
 
