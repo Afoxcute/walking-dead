@@ -95,8 +95,8 @@ I use Photoshop to draw the game logo and most of the game assets
 ### 2、Gaming
 I used Photoshop to draw most of the game UI. I used cocos as the game engine, implemented various game mechanisms and algorithms, and completed the complete game logic. It took a lot of time to realize a complete game. I think most of the time was spent on designing game art and implementing game logic.
 
-### 3、Push SDK
-I use Push SDK to greatly reduce the entry threshold for web2 players. Players may not need to create their own wallets, they only need their own social accounts (such as email etc.)  to enter the game. Of course, it also supports the use of most wallets such as metamask to enter the game.
+### 3、Rainbowkit tech
+I use Rainbowkit to greatly reduce the entry threshold for web2 players. Players can use their own wallets, they only need to scan QR code or connect directly to enter the game. Of course, it also supports the use of most wallets such as metamask to enter the game.
 
 ### 4、Hardhat and smart contract
 I used hardhat to write the game's smart contract, which was designed to store various game data, including player assets, weapons, character skins, etc., to ensure the transparency and security of player data. 
@@ -104,16 +104,16 @@ At the same time, a specific algorithm was designed to calculate and store the o
 Then, combined with WebPush SDK, the smart contract was deployed to the Somnia Testnet.
 
 ### 5、Important!!
-I used the Push SDK and the UEAFactory smart contract to implement a full-chain game leaderboard. This was previously unimaginable! Previously, player scores could only be ranked on a single chain!！！！
+I used the Sonia reactivity and the UEAFactory smart contract to implement a full-chain game leaderboard.
 
 ## Challenges we ran into
-Due to the limitations of the game engine, I couldn't use Push SDK or Web3 SDK. I think about it for a long time, about a week, and write a react project to expose the API to the game engine. It allows me to successfully complete various functions supported by Push SDK in the game engine!
+Due to the limitations of the game engine, I couldn't use Somnia reactivity or Web3 SDK. I think about it for a long time, about a week, and write a react project to expose the API to the game engine. It allows me to successfully complete various functions supported by Push SDK in the game engine!
 
 ## Accomplishments that we're proud of
 - I completed most of the game logic within the time limit.
 - I implemented specific algorithms to keep gamers immersed in the game, or at least give them a constant sense of tension and excitement.
 - Successfully deployed the smart contract to the Somnia Testnet. The Somnia Testnet is very fast and the experience is great!
-- I used the Push SDK and the UEAFactory smart contract to implement a full-chain game leaderboard. It's incredible that I've actually achieved this!！！
+- I used the Somnia reactivity and the UEAFactory smart contract to implement a full-chain game leaderboard. It's incredible that I've actually achieved this!！！
 
 ## What we learned
 - How to use game engines to realize your ideas
