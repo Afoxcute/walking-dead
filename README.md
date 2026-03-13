@@ -90,7 +90,7 @@ I completed this project during this days. The time was very tight and the workl
 
 ### 1、logo
 I use Photoshop to draw the game logo and most of the game assets
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/logo.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead//blob/main/gaming/assets/res/UI/common/logo.png?raw=true)
 
 ### 2、Gaming
 I used Photoshop to draw most of the game UI. I used cocos as the game engine, implemented various game mechanisms and algorithms, and completed the complete game logic. It took a lot of time to realize a complete game. I think most of the time was spent on designing game art and implementing game logic.
@@ -132,4 +132,4 @@ Due to the limitations of the game engine, I couldn't use Push SDK or Web3 SDK. 
 Thank you for your patience in reading this document. It is very long and took you a lot of time! Thank you very much!
 Of course, you are welcome to try my game! Feel the joy of roguelike game!
 
-[Click to play onchainVampireSurvivors](https://catkevin.github.io/OnchainVampireSurvivors/)
+[Click to play onchainVampireSurvivors](https://rococo-yeot-e15cd7.netlify.app/)
