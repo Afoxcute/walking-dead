@@ -10,7 +10,7 @@ I think only interesting web3 games are likely to be widely used, while games th
 onchainVampireSurvivors is a time survival game with minimal gameplay and roguelite elements. It uses Rainbowkit technology to allow players to use various methods, such as QR code, email, and more than 350 web3 wallets.
 The game uses a unique algorithm mechanism to optimize the game value, so that players can immerse themselves in a state of continuous tension and excitement. I created a specific algorithm in the smart contract and created an on-chain ranking list, which is very likely to reduce gas consumption without affecting the sorting efficiency. At the same time, I also simply implemented a unique lottery mechanism for players to draw cards.
 
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/2.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g1.png?raw=true)
 
 Using the introduction of the original Vampire Survivors game to explain the game values ​​of onchainVampireSurvivors: Monsters are everywhere, and you are nowhere to escape. All you can do is survive as long as possible until death inevitably ends your struggle. Collect gold in each run to buy upgrades and help the next survivor.
 
