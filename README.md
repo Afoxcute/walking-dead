@@ -41,7 +41,7 @@ Tips: Please use chrome browser to open.
 - You can get gold coins by purchasing, drawing prizes and participating in games.
 - You can only get diamonds and get cooler and more advanced weapons through lottery. (lottery is one of the easiest ways to get high-level weapons)
 
-![Alt text](https://github.com/CatKevin/OnchainVampireSurvivors/blob/main/images/3.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g3.png?raw=true)
 
 #### 2.2 Characters/Skins Page
 
