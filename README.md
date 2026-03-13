@@ -81,7 +81,7 @@ Tips: Please use chrome browser to open.
 
 - On the game settlement page, you need to click the Submit button to spread this valuable game data to Somnia Testnet, so that players around the world can see your outstanding performance!!
 
-![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/ovs/g9.png?raw=true)
+![Alt text](https://github.com/Afoxcute/walking-dead/blob/main/images/9.png?raw=true)
 
 
 
