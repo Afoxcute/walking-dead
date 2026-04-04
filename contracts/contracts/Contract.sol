@@ -146,6 +146,11 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
     bytes32[10] public topPlayerChainHashList; // Top 10 player chainHash List, bytes32
     uint public lastUpdateTime; // last update time of topList
 
+    /// @notice Optional UltraHonk verifier for `gameOverWithProof` (address(0) = verification disabled).
+    address public gameOverVerifier;
+
+    event GameOverVerifierSet(address indexed verifier);
+
     /// log
     mapping(address => uint) public playerLatestGameLogIdMap; // id => GameLog
     mapping(uint => GameLog) public gameLogMap; // id => GameLog
@@ -210,13 +215,65 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         LotteryItemList.push(LotteryItem(0,200));
         // LotteryItemList.push(LotteryItem(0,50));
         LotteryItemList.push(LotteryItem(1,20));
-        // LotteryItemList.push(LotteryItem(0,50));
+        LotteryItemList.push(LotteryItem(2,1));
         // LotteryItemList.push(LotteryItem(0,200));
         LotteryItemList.push(LotteryItem(3,9));
     }
 
     function distribution(address payable winner, uint amount) internal {
         winner.transfer(amount);
+    }
+
+    function setGameOverVerifier(address v) external onlyOwner {
+        gameOverVerifier = v;
+        emit GameOverVerifierSet(v);
+    }
+
+    /// @dev Grant skin from lottery: new skin unlock, or +1 level if already owned (capped).
+    function _grantLotterySkin(address player, uint skinId) internal {
+        require(skinPriceMap[skinId].price > 0 || skinId == 0, "Invalid skin id");
+        uint[] storage owned = playerSkinMap[player];
+        bool found = false;
+        for (uint i = 0; i < owned.length; i++) {
+            if (owned[i] == skinId) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            playerSkinMap[player].push(skinId);
+        } else {
+            uint lv = playerSkinLevelMap[player][skinId];
+            if (lv < skinLevelPriceList.length - 1) {
+                playerSkinLevelMap[player][skinId]++;
+            }
+        }
+    }
+
+    /// @dev Bounds and session window; full trustlessness needs a circuit + `gameOverWithProof`.
+    function _enforceGameOverScores(uint time, uint kills, uint logId) internal view {
+        require(gameLogMap[logId].startTime > 0, "no game");
+        require(kills <= 1_000_000_000, "kills OOB");
+        require(time <= 1_000_000_000_000, "score OOB");
+        require(block.timestamp - gameLogMap[logId].startTime <= 7 days, "session expired");
+    }
+
+    function _finalizeGameOver(uint logId, uint time, uint kills) internal {
+        gameLogMap[logId].endTime = block.timestamp;
+        gameLogMap[logId].grade = time;
+        pushDataToTopList(MessageItem(msg.sender, time, kills));
+
+        if (kills > 0) {
+            playerGoldMap[msg.sender] += kills;
+        }
+
+        emit GameLogEvent(
+            gameLogMap[logId].startTime,
+            gameLogMap[logId].endTime,
+            gameLogMap[logId].player,
+            time,
+            gameLogMap[logId].reLive
+        );
     }
 
     function startGame() public payable {
@@ -263,7 +320,7 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         weaponIdList = playerWeaponMap[player];
         weaponLevelList = new uint[](weaponIdList.length);
         for(uint i=0; i < weaponIdList.length; i++) {
-            weaponLevelList[i] = playerWeaponLevelMap[player][i];
+            weaponLevelList[i] = playerWeaponLevelMap[player][weaponIdList[i]];
         }
         return (weaponIdList, weaponLevelList);
     }
@@ -272,7 +329,7 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         skinIdList = playerSkinMap[player];
         skinLevelList = new uint[](skinIdList.length);
         for(uint i=0; i < skinIdList.length; i++) {
-            skinLevelList[i] = playerSkinLevelMap[player][i];
+            skinLevelList[i] = playerSkinLevelMap[player][skinIdList[i]];
         }
         return (skinIdList, skinLevelList);
     }
@@ -383,7 +440,7 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
             // mint diamond
             playerDiamondMap[msg.sender] += item.num;
         } else if(item.itemType == 2) {
-            // TODO: mint skin
+            _grantLotterySkin(msg.sender, item.num);
         } else if(item.itemType == 3) {
             // mint weapon
             playerWeaponMap[msg.sender].push(item.num);
@@ -409,29 +466,31 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         return (playerGoldMap[player], playerDiamondMap[player]);
     }
 
+    /// @notice Submit a run without SNARK verification (compatible with existing clients).
     function gameOver(uint time, uint kills) external {
-        // TODO: zk proof
-
         uint logId = playerLatestGameLogIdMap[msg.sender];
         require(gameLogMap[logId].player == msg.sender, "Call startGame first");
+        _enforceGameOverScores(time, kills, logId);
+        _finalizeGameOver(logId, time, kills);
+    }
 
-        // save data
-        gameLogMap[logId].endTime = block.timestamp;
-        gameLogMap[logId].grade = time;
-        pushDataToTopList(MessageItem(msg.sender,time, kills));
+    /// @notice Same as `gameOver` but verifies `proof` when `gameOverVerifier` is set (UltraHonk-style verifier).
+    /// @dev Public inputs are fixed layout: [bytes32(uint160(player)), bytes32(logId), bytes32(time), bytes32(kills)] — must match your circuit.
+    function gameOverWithProof(uint time, uint kills, bytes calldata proof) external {
+        uint logId = playerLatestGameLogIdMap[msg.sender];
+        require(gameLogMap[logId].player == msg.sender, "Call startGame first");
+        _enforceGameOverScores(time, kills, logId);
 
-        // mint gold
-        if(kills > 0) {
-            playerGoldMap[msg.sender] += kills;
+        if (gameOverVerifier != address(0)) {
+            bytes32[] memory pub = new bytes32[](4);
+            pub[0] = bytes32(uint256(uint160(msg.sender)));
+            pub[1] = bytes32(logId);
+            pub[2] = bytes32(time);
+            pub[3] = bytes32(kills);
+            require(IUltraVerifier(gameOverVerifier).verify(proof, pub), "Invalid proof");
         }
 
-        emit GameLogEvent(
-            gameLogMap[logId].startTime,
-            gameLogMap[logId].endTime,
-            gameLogMap[logId].player,
-            time,
-            gameLogMap[logId].reLive
-        );
+        _finalizeGameOver(logId, time, kills);
     }
 
     /// Use binary search algorithm
