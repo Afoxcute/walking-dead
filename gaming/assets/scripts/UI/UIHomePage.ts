@@ -1,6 +1,7 @@
 import UIPage from "../Manager/UIPage";
 import Constant, { GunInfo, PageName, PanelName } from "../Manager/Constant";
 import { cocosz } from "../Manager/CocosZ";
+import ReactivityBridge from "../Manager/ReactivityBridge";
 
 import FlyCoin from "../Manager/FlyCoin";
 import GameDate, { PriceType } from "../game/gameDate";
@@ -310,6 +311,7 @@ export default class UIHomePage extends UIPage {
     }
 
     cc.game.on(Constant.E_GAME_LOGIC, this._onGameMessageHandler, this);
+    ReactivityBridge.tryStart();
   }
 
   protected onClose() {
@@ -318,6 +320,12 @@ export default class UIHomePage extends UIPage {
 
   private _onGameMessageHandler(event: any) {
     switch (event.type) {
+      case Constant.E_SOMNIA_REACTIVITY: {
+        if (window.getPlayerAllAssets) {
+          window.getPlayerAllAssets(() => {});
+        }
+        break;
+      }
       case Constant.E_Fly_Coin: {
         this._flyCoins(event.iconName, event.frameNodeName);
         break;

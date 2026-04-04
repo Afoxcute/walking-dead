@@ -75,6 +75,12 @@ Subscriptions are created **off-chain** (or via the precompile). The contract on
 
 The **web3-api** app integrates `@somnia-chain/reactivity` so the game (Cocos) and the dashboard can use subscriptions without extra tooling.
 
+### Auto on-chain subscription (player wallet)
+
+When a wallet connects, **web3-api** runs `tryEnsureAutoSoliditySubscription` (`web3-api/src/autoOnchainReactivity.ts`): if the address holds **≥1 STT** and localStorage does not already record a successful run for that address, it submits `createSoliditySubscription` for **GameLogEvent** from the game contract with **handler = game contract**. After a successful receipt, it sets `localStorage` key `onchainVsReactivityAutoSub_v1_<address>`. Use `clearAutoSoliditySubscriptionFlag(address)` if the player cancels the subscription on-chain and should be allowed to auto-create again.
+
+Players below 1 STT skip silently (no tx). Failed txs are logged to the console only. (Somnia may still require a higher minimum balance for the subscription to stay active; see network docs.)
+
 ### Where it lives
 
 - **Package**: `web3-api` depends on `@somnia-chain/reactivity`.

@@ -1,6 +1,7 @@
 import UIPage from "../Manager/UIPage";
 import Constant, { PageName } from "../Manager/Constant";
 import { cocosz } from "../Manager/CocosZ";
+import ReactivityBridge from "../Manager/ReactivityBridge";
 
 const { ccclass } = cc._decorator;
 
@@ -66,6 +67,7 @@ export default class UILoadingPage extends UIPage {
 
           // wait for login
           if (window.userAccount != null && window.userAccount != undefined) {
+            ReactivityBridge.tryStart();
             let account =
               window.userAccount.slice(0, 6) +
               "..." +
@@ -86,6 +88,7 @@ export default class UILoadingPage extends UIPage {
               }
             }
           } else {
+            ReactivityBridge.tryStop();
             this._BtnLogin.active = true;
             this._BtnWallet.active = false;
             this._BtnStartGame.active = false;

@@ -20,4 +20,12 @@ interface Window {
   requestLottery: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   mintGold: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   reLive: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
+  onReactivityData?: (data: unknown) => void;
+  reactivitySubscribeOffChain?: (opts: {
+    wildcard?: boolean;
+    onData: (data: unknown) => void;
+    eventTopics?: `0x${string}`[];
+    onError?: (err: unknown) => void;
+  }) => Promise<boolean>;
+  reactivityUnsubscribe?: () => void;
 }

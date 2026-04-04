@@ -18,6 +18,7 @@ import {
   createOnchainBlockTickSubscription,
   scheduleOnchainCronJob,
 } from "./reactivity";
+import { tryEnsureAutoSoliditySubscription } from "./autoOnchainReactivity";
 
 export function App() {
   const { address, isConnected } = useAccount();
@@ -37,6 +38,26 @@ export function App() {
       window.userAccount = undefined;
     }
   }, [isConnected, address]);
+
+  useEffect(() => {
+    if (!isConnected || !address || !publicClient || !walletClient?.data) return;
+    let cancelled = false;
+    void tryEnsureAutoSoliditySubscription({
+      address: address as `0x${string}`,
+      publicClient,
+      wallet: walletClient.data as Parameters<typeof createReactivitySDK>[0]["wallet"],
+    }).then((r) => {
+      if (cancelled) return;
+      if (r.status === "ok") {
+        console.info("[reactivity] Auto on-chain subscription confirmed:", r.txHash);
+      } else if (r.status === "error") {
+        console.warn("[reactivity] Auto on-chain subscription failed:", r.message);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isConnected, address, publicClient, walletClient?.data]);
 
   const onConnectButtonClick = () => {
     openConnectModal?.();

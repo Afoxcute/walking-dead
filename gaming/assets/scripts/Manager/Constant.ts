@@ -34,6 +34,9 @@ export default class Constant {
 
   public static E_GAME_LOGIC: string = "E_GAME_LOGIC";
 
+  /** Payload from Somnia reactivity WebSocket (off-chain subscribe). */
+  public static E_SOMNIA_REACTIVITY: string = "E_SOMNIA_REACTIVITY";
+
   public static E_UPDATE_PROGRESS: string = "E_UPDATE_PROGRESS";
 
   public static E_Fly_Coin: string = "E_Fly_Coin";
