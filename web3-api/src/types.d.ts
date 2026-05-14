@@ -30,6 +30,8 @@ interface Window {
   reLive: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   /** Pull accrued native (STT) leaderboard rewards to the connected wallet (#1 must call after others pay). */
   claimNativeRewards: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
+  /** Set when connected: address of gameOverVerifier (zero = no proof required). Cocos can read before gameOver. */
+  gameOverVerifierAddress?: `0x${string}`;
   // Somnia reactivity (off-chain + on-chain)
   /** Callback for reactivity off-chain subscription data (set by game before subscribe). */
   onReactivityData?: (data: unknown) => void;

@@ -1,13 +1,11 @@
-// Somnia Testnet (https://docs.somnia.network/)
-// Canonical RPC: https://dream-rpc.somnia.network/
+export {
+  GAME_CONTRACT_ADDRESS,
+  JSON_RPC_PROVIDER,
+  SOMNIA_WSS_RPC,
+} from "./env";
 export const SOMNIA_TESTNET_CHAIN_ID = 50312;
-export const JSON_RPC_PROVIDER = "https://dream-rpc.somnia.network/";
-/** WebSocket RPC for reactivity off-chain subscriptions (push notifications). */
-export const SOMNIA_WSS_RPC = "wss://dream-rpc.somnia.network/";
 export const BLOCK_EXPLORER_URL = "https://shannon-explorer.somnia.network/";
 export const NATIVE_SYMBOL = "STT";
-
-export const GAME_CONTRACT_ADDRESS = "0x468D2FCd8EBc64B885b3e8573A6e5eCE4687abAF";
 
 export const GAME_ABI = [
 	{
@@ -35,6 +33,11 @@ export const GAME_ABI = [
 			}
 		],
 		"name": "OwnableInvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "RescueImpairsClaimReserves",
 		"type": "error"
 	},
 	{
@@ -519,6 +522,19 @@ export const GAME_ABI = [
 			}
 		],
 		"name": "claimableNative",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "nativeClaimsReserved",
 		"outputs": [
 			{
 				"internalType": "uint256",

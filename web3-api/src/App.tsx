@@ -1,12 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useAccount, usePublicClient, useWalletClient, useWriteContract } from "wagmi";
 import { ConnectButton, useConnectModal, useAccountModal } from "@rainbow-me/rainbowkit";
-import { ethers } from "ethers";
-import {
-  GAME_ABI,
-  GAME_CONTRACT_ADDRESS,
-  JSON_RPC_PROVIDER,
-} from "./config";
+import { GAME_ABI, GAME_CONTRACT_ADDRESS } from "./config";
 import {
   createReactivitySDK,
   createReactivityPublicClientWebSocket,
@@ -19,6 +14,7 @@ import {
   scheduleOnchainCronJob,
 } from "./reactivity";
 import { tryEnsureAutoSoliditySubscription } from "./autoOnchainReactivity";
+import { createGameWindowApi, type WriteContractAsyncFn } from "./gameWindowApi";
 
 export function App() {
   const { address, isConnected } = useAccount();
@@ -59,537 +55,268 @@ export function App() {
     };
   }, [isConnected, address, publicClient, walletClient?.data]);
 
-  const onConnectButtonClick = () => {
-    openConnectModal?.();
-  };
+  const waitForReceipt = useCallback(
+    async (hash: `0x${string}`) => {
+      if (!publicClient) return null;
+      return publicClient.waitForTransactionReceipt({ hash });
+    },
+    [publicClient]
+  );
 
-  const onConnectedButtonClick = () => {
+  const gameApi = useMemo(
+    () =>
+      createGameWindowApi({
+        address: address as `0x${string}` | undefined,
+        publicClient: publicClient ?? undefined,
+        writeContractAsync: writeContractAsync as unknown as WriteContractAsyncFn,
+        waitForReceipt,
+      }),
+    [address, publicClient, writeContractAsync, waitForReceipt]
+  );
+
+  useEffect(() => {
+    window.getTopListInfo = gameApi.getTopListInfo;
+    window.getPlayerAllAssets = gameApi.getPlayerAllAssets;
+    window.getPlayerLastLotteryResult = gameApi.getPlayerLastLotteryResult;
+    window.getPlayerAllWeaponInfo = gameApi.getPlayerAllWeaponInfo;
+    window.getPlayerAllSkinInfo = gameApi.getPlayerAllSkinInfo;
+    window.getClaimableNative = gameApi.getClaimableNative;
+    window.startGame = gameApi.startGame;
+    window.gameOver = gameApi.gameOver;
+    window.buyOrUpgradeSkin = gameApi.buyOrUpgradeSkin;
+    window.buyOrUpgradeWeapon = gameApi.buyOrUpgradeWeapon;
+    window.requestLottery = gameApi.requestLottery;
+    window.mintGold = gameApi.mintGold;
+    window.reLive = gameApi.reLive;
+    window.claimNativeRewards = gameApi.claimNativeRewards;
+    return () => {
+      const w = window as unknown as Record<string, unknown>;
+      delete w.getTopListInfo;
+      delete w.getPlayerAllAssets;
+      delete w.getPlayerLastLotteryResult;
+      delete w.getPlayerAllWeaponInfo;
+      delete w.getPlayerAllSkinInfo;
+      delete w.getClaimableNative;
+      delete w.startGame;
+      delete w.gameOver;
+      delete w.buyOrUpgradeSkin;
+      delete w.buyOrUpgradeWeapon;
+      delete w.requestLottery;
+      delete w.mintGold;
+      delete w.reLive;
+      delete w.claimNativeRewards;
+    };
+  }, [gameApi]);
+
+  useEffect(() => {
+    if (!publicClient || !address) {
+      window.gameOverVerifierAddress = undefined;
+      return;
+    }
+    let cancelled = false;
+    void publicClient
+      .readContract({
+        address: GAME_CONTRACT_ADDRESS,
+        abi: GAME_ABI,
+        functionName: "gameOverVerifier",
+        args: [],
+      })
+      .then((v: unknown) => {
+        if (!cancelled) window.gameOverVerifierAddress = v as `0x${string}`;
+      })
+      .catch(() => {
+        if (!cancelled) window.gameOverVerifierAddress = undefined;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [publicClient, address]);
+
+  const onConnectButtonClick = useCallback(() => {
+    openConnectModal?.();
+  }, [openConnectModal]);
+
+  const onConnectedButtonClick = useCallback(() => {
     if (isConnected && openAccountModal) {
       openAccountModal();
     } else {
       openConnectModal?.();
     }
-  };
+  }, [isConnected, openAccountModal, openConnectModal]);
 
-  window.onConnectButtonClick = onConnectButtonClick;
-  window.onConnectedButtonClick = onConnectedButtonClick;
-
-  const getGameContract = async () => {
-    const provider = new ethers.JsonRpcProvider(JSON_RPC_PROVIDER);
-    const contract = new ethers.Contract(
-      GAME_CONTRACT_ADDRESS,
-      GAME_ABI,
-      provider
-    );
-    return contract;
-  };
-
-  const parseChainHash = (_chainHash: unknown) => {
+  const parseChainHash = useCallback((_chainHash: unknown) => {
     return "Somnia Testnet";
-  };
+  }, []);
 
-  window.parseChainHash = parseChainHash;
+  useEffect(() => {
+    window.onConnectButtonClick = onConnectButtonClick;
+    window.onConnectedButtonClick = onConnectedButtonClick;
+    window.parseChainHash = parseChainHash;
+    return () => {
+      delete (window as unknown as Record<string, unknown>).onConnectButtonClick;
+      delete (window as unknown as Record<string, unknown>).onConnectedButtonClick;
+      delete (window as unknown as Record<string, unknown>).parseChainHash;
+    };
+  }, [onConnectButtonClick, onConnectedButtonClick, parseChainHash]);
 
-  const waitForReceipt = async (hash: `0x${string}`) => {
-    if (!publicClient) return null;
-    return publicClient.waitForTransactionReceipt({ hash });
-  };
-
-  const getTopListInfo = async (onSuccess?: (receipt: unknown) => void) => {
-    try {
-      const contract = await getGameContract();
-      const data = await contract.getTopListInfo();
-      onSuccess?.(data);
-    } catch (err) {
-      console.error("Error getTopListInfo:", err);
-    }
-  };
-
-  const getPlayerAllAssets = async (onSuccess?: (receipt: unknown) => void) => {
-    try {
-      const contract = await getGameContract();
-      if (address) {
-        const data = await contract.getPlayerAllAssets(address);
-        onSuccess?.(data);
-      }
-    } catch (err) {
-      console.error("Error getPlayerAllAssets:", err);
-    }
-  };
-
-  const getPlayerLastLotteryResult = async (
-    onSuccess?: (receipt: unknown) => void
-  ) => {
-    try {
-      const contract = await getGameContract();
-      if (address) {
-        const data = await contract.getPlayerLastLotteryResult(address);
-        onSuccess?.(data);
-      }
-    } catch (err) {
-      console.error("Error getPlayerLastLotteryResult:", err);
-    }
-  };
-
-  const getPlayerAllWeaponInfo = async (
-    onSuccess?: (receipt: unknown) => void
-  ) => {
-    try {
-      const contract = await getGameContract();
-      if (address) {
-        const data = await contract.getPlayerAllWeaponInfo(address);
-        onSuccess?.(data);
-      }
-    } catch (err) {
-      console.error("Error getPlayerAllWeaponInfo:", err);
-    }
-  };
-
-  const getPlayerAllSkinInfo = async (
-    onSuccess?: (receipt: unknown) => void
-  ) => {
-    try {
-      const contract = await getGameContract();
-      if (address) {
-        const data = await contract.getPlayerAllSkinInfo(address);
-        onSuccess?.(data);
-      }
-    } catch (err) {
-      console.error("Error getPlayerAllSkinInfo:", err);
-    }
-  };
-
-  const getClaimableNative = async (onSuccess?: (wei: bigint) => void) => {
-    try {
-      const contract = await getGameContract();
-      if (address) {
-        const v = await contract.claimableNative(address);
-        onSuccess?.(BigInt(v.toString()));
-      }
-    } catch (err) {
-      console.error("Error getClaimableNative:", err);
-    }
-  };
-
-  window.getTopListInfo = getTopListInfo;
-  window.getPlayerAllAssets = getPlayerAllAssets;
-  window.getPlayerLastLotteryResult = getPlayerLastLotteryResult;
-  window.getPlayerAllWeaponInfo = getPlayerAllWeaponInfo;
-  window.getPlayerAllSkinInfo = getPlayerAllSkinInfo;
-  window.getClaimableNative = getClaimableNative;
-
-  const startGame = async (
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "startGame",
-          value: BigInt(10 ** 16),
-          gas: BigInt(2_500_000),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
+  useEffect(() => {
+    window.reactivitySubscribeOffChain = async (opts) => {
+      try {
+        reactivityUnsubscribeRef.current?.();
+        reactivityUnsubscribeRef.current = null;
+        const wsClient = createReactivityPublicClientWebSocket();
+        const onData = (data: unknown) => {
+          opts.onData(data);
+          window.onReactivityData?.(data);
+        };
+        const sub = opts.wildcard
+          ? await subscribeOffChainWildcard(wsClient, {
+              ethCalls: [],
+              onData,
+              onError: opts.onError,
+            })
+          : await subscribeOffChain(wsClient, {
+              ethCalls: [],
+              onData,
+              onError: opts.onError,
+              eventTopics: opts.eventTopics,
+            });
+        if (sub) {
+          reactivityUnsubscribeRef.current = sub.unsubscribe;
+          return true;
         }
+        return false;
+      } catch (e) {
+        opts.onError?.(e);
+        return false;
       }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  const ZERO_ADDR = "0x0000000000000000000000000000000000000000" as `0x${string}`;
-
-  const gameOver = async (
-    time: bigint,
-    kills: bigint,
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void,
-    proofHex?: string
-  ) => {
-    try {
-      if (!address || !publicClient) {
-        onError?.(undefined);
-        return;
-      }
-      const verifier = (await publicClient.readContract({
-        address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-        abi: GAME_ABI,
-        functionName: "gameOverVerifier",
-        args: [],
-      })) as `0x${string}`;
-      const needsProof =
-        typeof verifier === "string" &&
-        verifier.toLowerCase() !== ZERO_ADDR.toLowerCase();
-
-      let proofData: `0x${string}` = "0x";
-      if (proofHex && proofHex.length > 2) {
-        proofData = (proofHex.startsWith("0x") ? proofHex : `0x${proofHex}`) as `0x${string}`;
-      }
-
-      if (needsProof && proofData.length <= 2) {
-        alert(
-          "This deployment requires a ZK proof to submit scores (gameOverVerifier is set). " +
-            "Pass proof as the 5th argument to window.gameOver(time, kills, onSuccess, onError, proofHex), or clear the verifier on the contract."
-        );
-        onError?.("proof_required");
-        return;
-      }
-
-      const hash = needsProof
-        ? await writeContractAsync({
-            address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-            abi: GAME_ABI,
-            functionName: "gameOverWithProof",
-            args: [time, kills, proofData],
-            value: BigInt(0),
-            gas: BigInt(3_500_000),
-          })
-        : await writeContractAsync({
-            address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-            abi: GAME_ABI,
-            functionName: "gameOver",
-            args: [time, kills],
-            value: BigInt(0),
-            gas: BigInt(3_000_000),
-          });
-      const resp = await waitForReceipt(hash);
-      if (resp) {
-        resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-      } else {
-        onError?.(undefined);
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-      onError?.(e);
-    }
-  };
-
-  const buyOrUpgradeSkin = async (
-    id: bigint,
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "buyOrUpgradeSkin",
-          args: [id],
-          value: BigInt(0),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-        }
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  const buyOrUpgradeWeapon = async (
-    id: bigint,
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "buyOrUpgradeWeapon",
-          args: [id],
-          value: BigInt(0),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-        }
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  const requestLottery = async (
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "requestLottery",
-          args: [],
-          value: BigInt(4 * 10 ** 16),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-        }
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  const mintGold = async (
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "mintGold",
-          args: [],
-          value: BigInt(10 ** 16),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-        }
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  const reLive = async (
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "reLive",
-          args: [],
-          value: BigInt(5 * 10 ** 16),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-        }
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  const claimNativeRewards = async (
-    onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
-  ) => {
-    try {
-      if (address) {
-        const hash = await writeContractAsync({
-          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
-          abi: GAME_ABI,
-          functionName: "claimNativeRewards",
-          args: [],
-          value: BigInt(0),
-        });
-        const resp = await waitForReceipt(hash);
-        if (resp) {
-          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
-        }
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (message != null && message !== "") {
-        alert(message);
-      }
-    }
-  };
-
-  window.startGame = startGame;
-  window.gameOver = gameOver;
-  window.buyOrUpgradeSkin = buyOrUpgradeSkin;
-  window.buyOrUpgradeWeapon = buyOrUpgradeWeapon;
-  window.requestLottery = requestLottery;
-  window.mintGold = mintGold;
-  window.reLive = reLive;
-  window.claimNativeRewards = claimNativeRewards;
-
-  // Somnia reactivity: off-chain and on-chain subscription API for Cocos / game
-  window.reactivitySubscribeOffChain = async (opts) => {
-    try {
+    };
+    window.reactivityUnsubscribe = () => {
       reactivityUnsubscribeRef.current?.();
       reactivityUnsubscribeRef.current = null;
-      const wsClient = createReactivityPublicClientWebSocket();
-      const onData = (data: unknown) => {
-        opts.onData(data);
-        window.onReactivityData?.(data);
-      };
-      const sub = opts.wildcard
-        ? await subscribeOffChainWildcard(wsClient, {
-            ethCalls: [],
-            onData,
-            onError: opts.onError,
-          })
-        : await subscribeOffChain(wsClient, {
-            ethCalls: [],
-            onData,
-            onError: opts.onError,
-            eventTopics: opts.eventTopics,
-          });
-      if (sub) {
-        reactivityUnsubscribeRef.current = sub.unsubscribe;
-        return true;
+    };
+    window.reactivityCreateSoliditySubscription = async (data) => {
+      const wallet = walletClient?.data;
+      if (!publicClient || !wallet?.account) {
+        return { error: "Wallet not connected" };
       }
-      return false;
-    } catch (e) {
-      opts.onError?.(e);
-      return false;
-    }
-  };
-  window.reactivityUnsubscribe = () => {
-    reactivityUnsubscribeRef.current?.();
-    reactivityUnsubscribeRef.current = null;
-  };
-  window.reactivityCreateSoliditySubscription = async (data) => {
-    const wallet = walletClient?.data;
-    if (!publicClient || !wallet?.account) {
-      return { error: "Wallet not connected" };
-    }
-    try {
-      const sdk = createReactivitySDK({
-        public: publicClient,
-        wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
-      });
-      const txHash = await createSoliditySubscription(sdk, {
-        handlerContractAddress: data.handlerContractAddress as `0x${string}`,
-        priorityFeePerGas: data.priorityFeePerGas,
-        maxFeePerGas: data.maxFeePerGas,
-        gasLimit: data.gasLimit,
-        isGuaranteed: data.isGuaranteed,
-        isCoalesced: data.isCoalesced,
-        eventTopics: data.eventTopics,
-        emitter: data.emitter as `0x${string}` | undefined,
-      });
-      if (txHash instanceof Error) return { error: txHash.message };
-      return txHash;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return { error: message };
-    }
-  };
-  window.reactivityGetSubscriptionInfo = async (subscriptionId) => {
-    if (!publicClient) return undefined;
-    const sdk = createReactivitySDK({ public: publicClient });
-    const info = await getSubscriptionInfo(sdk, subscriptionId);
-    return info instanceof Error ? undefined : info;
-  };
-  window.reactivityCancelSubscription = async (subscriptionId) => {
-    const wallet = walletClient?.data;
-    if (!publicClient || !wallet?.account) {
-      return { error: "Wallet not connected" };
-    }
-    try {
-      const sdk = createReactivitySDK({
-        public: publicClient,
-        wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
-      });
-      const txHash = await cancelSoliditySubscription(sdk, subscriptionId);
-      if (txHash instanceof Error) return { error: txHash.message };
-      return txHash;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return { error: message };
-    }
-  };
-  window.reactivityCreateBlockTickSubscription = async (data) => {
-    const wallet = walletClient?.data;
-    if (!publicClient || !wallet?.account) {
-      return { error: "Wallet not connected" };
-    }
-    try {
-      const sdk = createReactivitySDK({
-        public: publicClient,
-        wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
-      });
-      const txHash = await createOnchainBlockTickSubscription(sdk, {
-        handlerContractAddress: data.handlerContractAddress as `0x${string}`,
-        blockNumber: data.blockNumber,
-        handlerFunctionSelector: data.handlerFunctionSelector,
-        priorityFeePerGas: data.priorityFeePerGas,
-        maxFeePerGas: data.maxFeePerGas,
-        gasLimit: data.gasLimit,
-        isGuaranteed: data.isGuaranteed,
-        isCoalesced: data.isCoalesced,
-      });
-      if (txHash instanceof Error) return { error: txHash.message };
-      return txHash;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return { error: message };
-    }
-  };
-  window.reactivityScheduleCronJob = async (data) => {
-    const wallet = walletClient?.data;
-    if (!publicClient || !wallet?.account) {
-      return { error: "Wallet not connected" };
-    }
-    try {
-      const sdk = createReactivitySDK({
-        public: publicClient,
-        wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
-      });
-      const txHash = await scheduleOnchainCronJob(sdk, {
-        timestampMs: data.timestampMs,
-        handlerContractAddress: data.handlerContractAddress as `0x${string}`,
-        handlerFunctionSelector: data.handlerFunctionSelector,
-        priorityFeePerGas: data.priorityFeePerGas,
-        maxFeePerGas: data.maxFeePerGas,
-        gasLimit: data.gasLimit,
-        isGuaranteed: data.isGuaranteed,
-        isCoalesced: data.isCoalesced,
-      });
-      if (txHash instanceof Error) return { error: txHash.message };
-      return txHash;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      return { error: message };
-    }
-  };
+      try {
+        const sdk = createReactivitySDK({
+          public: publicClient,
+          wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
+        });
+        const txHash = await createSoliditySubscription(sdk, {
+          handlerContractAddress: data.handlerContractAddress as `0x${string}`,
+          priorityFeePerGas: data.priorityFeePerGas,
+          maxFeePerGas: data.maxFeePerGas,
+          gasLimit: data.gasLimit,
+          isGuaranteed: data.isGuaranteed,
+          isCoalesced: data.isCoalesced,
+          eventTopics: data.eventTopics,
+          emitter: data.emitter as `0x${string}` | undefined,
+        });
+        if (txHash instanceof Error) return { error: txHash.message };
+        return txHash;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { error: message };
+      }
+    };
+    window.reactivityGetSubscriptionInfo = async (subscriptionId) => {
+      if (!publicClient) return undefined;
+      const sdk = createReactivitySDK({ public: publicClient });
+      const info = await getSubscriptionInfo(sdk, subscriptionId);
+      return info instanceof Error ? undefined : info;
+    };
+    window.reactivityCancelSubscription = async (subscriptionId) => {
+      const wallet = walletClient?.data;
+      if (!publicClient || !wallet?.account) {
+        return { error: "Wallet not connected" };
+      }
+      try {
+        const sdk = createReactivitySDK({
+          public: publicClient,
+          wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
+        });
+        const txHash = await cancelSoliditySubscription(sdk, subscriptionId);
+        if (txHash instanceof Error) return { error: txHash.message };
+        return txHash;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { error: message };
+      }
+    };
+    window.reactivityCreateBlockTickSubscription = async (data) => {
+      const wallet = walletClient?.data;
+      if (!publicClient || !wallet?.account) {
+        return { error: "Wallet not connected" };
+      }
+      try {
+        const sdk = createReactivitySDK({
+          public: publicClient,
+          wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
+        });
+        const txHash = await createOnchainBlockTickSubscription(sdk, {
+          handlerContractAddress: data.handlerContractAddress as `0x${string}`,
+          blockNumber: data.blockNumber,
+          handlerFunctionSelector: data.handlerFunctionSelector,
+          priorityFeePerGas: data.priorityFeePerGas,
+          maxFeePerGas: data.maxFeePerGas,
+          gasLimit: data.gasLimit,
+          isGuaranteed: data.isGuaranteed,
+          isCoalesced: data.isCoalesced,
+        });
+        if (txHash instanceof Error) return { error: txHash.message };
+        return txHash;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { error: message };
+      }
+    };
+    window.reactivityScheduleCronJob = async (data) => {
+      const wallet = walletClient?.data;
+      if (!publicClient || !wallet?.account) {
+        return { error: "Wallet not connected" };
+      }
+      try {
+        const sdk = createReactivitySDK({
+          public: publicClient,
+          wallet: wallet as Parameters<typeof createReactivitySDK>[0]["wallet"],
+        });
+        const txHash = await scheduleOnchainCronJob(sdk, {
+          timestampMs: data.timestampMs,
+          handlerContractAddress: data.handlerContractAddress as `0x${string}`,
+          handlerFunctionSelector: data.handlerFunctionSelector,
+          priorityFeePerGas: data.priorityFeePerGas,
+          maxFeePerGas: data.maxFeePerGas,
+          gasLimit: data.gasLimit,
+          isGuaranteed: data.isGuaranteed,
+          isCoalesced: data.isCoalesced,
+        });
+        if (txHash instanceof Error) return { error: txHash.message };
+        return txHash;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return { error: message };
+      }
+    };
+    return () => {
+      const w = window as unknown as Record<string, unknown>;
+      delete w.reactivitySubscribeOffChain;
+      delete w.reactivityUnsubscribe;
+      delete w.reactivityCreateSoliditySubscription;
+      delete w.reactivityGetSubscriptionInfo;
+      delete w.reactivityCancelSubscription;
+      delete w.reactivityCreateBlockTickSubscription;
+      delete w.reactivityScheduleCronJob;
+    };
+  }, [publicClient, walletClient?.data]);
 
   return (
     <main>
       <div style={{ display: "none" }}>
         <ConnectButton />
-        {isConnected && address && (
-          <p>Somnia Testnet Account: {address}</p>
-        )}
+        {isConnected && address && <p>Somnia Testnet Account: {address}</p>}
       </div>
     </main>
   );

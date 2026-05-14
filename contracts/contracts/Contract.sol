@@ -5,17 +5,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SomniaEventHandler} from "@somnia-chain/reactivity-contracts/contracts/SomniaEventHandler.sol";
 
-// Universal Account ID Struct and IUEAFactory Interface
-struct UniversalAccountId {
-    string chainNamespace;
-    string chainId;
-    bytes owner;
-}
-
-interface IUEAFactory {
-    function getOriginForUEA(address addr) external view returns (UniversalAccountId memory account, bool isUEA);
-}
-
 interface IUltraVerifier {
     function getVerificationKeyHash() external pure returns (bytes32);
 
@@ -51,7 +40,8 @@ contract ZKGameClient is Ownable, ReentrancyGuard, SomniaEventHandler {
     error ZeroAddress();
     error NativeTransferFailed();
     error NothingToClaim();
-    error RescueExceedsBalance();
+    /// @dev Owner tried to `rescueNative` more than the contract balance **not** reserved for pull-claims.
+    error RescueImpairsClaimReserves();
 
     // 0: Gold; 1: Diamond;
     struct PriceItem {
@@ -126,6 +116,10 @@ contract ZKGameClient is Ownable, ReentrancyGuard, SomniaEventHandler {
 
     /// @notice Native STT owed to a player (rank #1 rewards, etc.); claim via `claimNativeRewards`.
     mapping(address => uint256) public claimableNative;
+
+    /// @notice Sum of all `claimableNative` credits outstanding; must stay in contract until claimed.
+    /// @dev Maintained in `_accrueToLeader` / `claimNativeRewards`. Used so `rescueNative` cannot rug pull-claim reserves.
+    uint256 public nativeClaimsReserved;
 
     /// @notice Optional UltraHonk verifier for `gameOverWithProof` (address(0) = verification disabled).
     address public gameOverVerifier;
@@ -205,6 +199,7 @@ contract ZKGameClient is Ownable, ReentrancyGuard, SomniaEventHandler {
         address top = _currentTopPlayer();
         if (top != address(0)) {
             claimableNative[top] += amount;
+            nativeClaimsReserved += amount;
         }
     }
 
@@ -213,13 +208,18 @@ contract ZKGameClient is Ownable, ReentrancyGuard, SomniaEventHandler {
         uint256 amt = claimableNative[msg.sender];
         if (amt == 0) revert NothingToClaim();
         claimableNative[msg.sender] = 0;
+        nativeClaimsReserved -= amt;
         _sendValue(payable(msg.sender), amt);
     }
 
-    /// @notice Emergency native recovery; does not reconcile `claimableNative` — use only with care (e.g. testnet).
+    /// @notice Emergency native recovery for **unreserved** balance only (`balance - nativeClaimsReserved`).
+    /// @dev Cannot drain STT owed in `claimableNative` / `nativeClaimsReserved`. If `balance < reserved` (broken
+    ///      invariant), this reverts arithmetically — fix accounting before using.
     function rescueNative(address payable to, uint256 amount) external onlyOwner nonReentrant {
         if (to == address(0)) revert ZeroAddress();
-        if (amount > address(this).balance) revert RescueExceedsBalance();
+        uint256 bal = address(this).balance;
+        uint256 unreserved = bal - nativeClaimsReserved;
+        if (amount > unreserved) revert RescueImpairsClaimReserves();
         _sendValue(to, amount);
     }
 
@@ -367,6 +367,13 @@ contract ZKGameClient is Ownable, ReentrancyGuard, SomniaEventHandler {
     }
 
     // --- Lottery entropy (explicitly NOT an oracle VRF) -------------------------------------------
+    //
+    // Production options (pick one and delete block-local entropy for draws):
+    // - **Oracle VRF** (e.g. Chainlink): request randomness off-chain / two-tx fulfill pattern; use returned word in fulfill.
+    // - **Commit–reveal**: player commits `hash(seed)` in tx1; after N blocks, reveals `seed` in tx2; derive index from `keccak256(seed, blockhash)`.
+    // - **Somnia randomness API** (if/when exposed): follow official docs and replace `_lotteryEntropyWord` with their flow.
+    //
+    // Current `_lotteryEntropyWord` is documented in the contract-level `@custom:security` notice above.
 
     function _lotteryEntropyWord(address player, uint256 salt) internal view returns (uint256) {
         return uint256(
