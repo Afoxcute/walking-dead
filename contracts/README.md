@@ -55,7 +55,7 @@ to compile your contracts. This will also detect the [Contracts Extensions Docs]
    # or
    yarn deploy:somnia
    ```
-   The script will print the deployed `ZKGameClient` address. Set that as `GAME_CONTRACT_ADDRESS` in `web3-api/src/config.ts`.
+   The script writes `deployments/somnia.json` and **updates `GAME_CONTRACT_ADDRESS` in `web3-api/src/config.ts`**. Rebuild the wallet bundle and copy it into Cocos: `cd web3-api && yarn build && node ../scripts/copy-wallet-to-cocos.cjs`.
 
 ### Deploy via Thirdweb CLI
 

@@ -159,11 +159,24 @@ export function App() {
     }
   };
 
+  const getClaimableNative = async (onSuccess?: (wei: bigint) => void) => {
+    try {
+      const contract = await getGameContract();
+      if (address) {
+        const v = await contract.claimableNative(address);
+        onSuccess?.(BigInt(v.toString()));
+      }
+    } catch (err) {
+      console.error("Error getClaimableNative:", err);
+    }
+  };
+
   window.getTopListInfo = getTopListInfo;
   window.getPlayerAllAssets = getPlayerAllAssets;
   window.getPlayerLastLotteryResult = getPlayerLastLotteryResult;
   window.getPlayerAllWeaponInfo = getPlayerAllWeaponInfo;
   window.getPlayerAllSkinInfo = getPlayerAllSkinInfo;
+  window.getClaimableNative = getClaimableNative;
 
   const startGame = async (
     onSuccess?: (receipt: unknown) => void,
@@ -191,25 +204,61 @@ export function App() {
     }
   };
 
+  const ZERO_ADDR = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+
   const gameOver = async (
     time: bigint,
     kills: bigint,
     onSuccess?: (receipt: unknown) => void,
-    onError?: (receipt: unknown) => void
+    onError?: (receipt: unknown) => void,
+    proofHex?: string
   ) => {
     try {
-      if (!address) {
+      if (!address || !publicClient) {
         onError?.(undefined);
         return;
       }
-      const hash = await writeContractAsync({
+      const verifier = (await publicClient.readContract({
         address: GAME_CONTRACT_ADDRESS as `0x${string}`,
         abi: GAME_ABI,
-        functionName: "gameOver",
-        args: [time, kills],
-        value: BigInt(0),
-        gas: BigInt(3_000_000),
-      });
+        functionName: "gameOverVerifier",
+        args: [],
+      })) as `0x${string}`;
+      const needsProof =
+        typeof verifier === "string" &&
+        verifier.toLowerCase() !== ZERO_ADDR.toLowerCase();
+
+      let proofData: `0x${string}` = "0x";
+      if (proofHex && proofHex.length > 2) {
+        proofData = (proofHex.startsWith("0x") ? proofHex : `0x${proofHex}`) as `0x${string}`;
+      }
+
+      if (needsProof && proofData.length <= 2) {
+        alert(
+          "This deployment requires a ZK proof to submit scores (gameOverVerifier is set). " +
+            "Pass proof as the 5th argument to window.gameOver(time, kills, onSuccess, onError, proofHex), or clear the verifier on the contract."
+        );
+        onError?.("proof_required");
+        return;
+      }
+
+      const hash = needsProof
+        ? await writeContractAsync({
+            address: GAME_CONTRACT_ADDRESS as `0x${string}`,
+            abi: GAME_ABI,
+            functionName: "gameOverWithProof",
+            args: [time, kills, proofData],
+            value: BigInt(0),
+            gas: BigInt(3_500_000),
+          })
+        : await writeContractAsync({
+            address: GAME_CONTRACT_ADDRESS as `0x${string}`,
+            abi: GAME_ABI,
+            functionName: "gameOver",
+            args: [time, kills],
+            value: BigInt(0),
+            gas: BigInt(3_000_000),
+          });
       const resp = await waitForReceipt(hash);
       if (resp) {
         resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);

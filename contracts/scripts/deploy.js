@@ -25,10 +25,27 @@ async function main() {
   fs.writeFileSync(DEPLOYMENTS_PATH, JSON.stringify({ ZKGameClient: address }, null, 2));
   console.log("Saved address to", DEPLOYMENTS_PATH);
 
+  const CONFIG_PATH = path.join(__dirname, "..", "..", "web3-api", "src", "config.ts");
+  if (fs.existsSync(CONFIG_PATH)) {
+    let src = fs.readFileSync(CONFIG_PATH, "utf8");
+    const next = src.replace(
+      /export const GAME_CONTRACT_ADDRESS = "0x[a-fA-F0-9]{40}";/,
+      `export const GAME_CONTRACT_ADDRESS = "${address}";`
+    );
+    if (next !== src) {
+      fs.writeFileSync(CONFIG_PATH, next);
+      console.log("Updated GAME_CONTRACT_ADDRESS in", CONFIG_PATH);
+    } else {
+      console.warn("Could not auto-patch GAME_CONTRACT_ADDRESS (pattern not found). Update web3-api/src/config.ts manually.");
+    }
+  } else {
+    console.warn("web3-api/src/config.ts not found; skip auto-patch.");
+  }
+
   console.log("\nNext steps:");
-  console.log("1. npm run call-gameover  (uses this address automatically)");
-  console.log("2. Update web3-api/src/config.ts: GAME_CONTRACT_ADDRESS =", address);
-  console.log("3. (Optional) Create Somnia reactivity subscription - see contracts/REACTIVITY.md");
+  console.log("1. Rebuild web3-api and copy wallet bundle: cd web3-api && yarn build && node ../scripts/copy-wallet-to-cocos.cjs");
+  console.log("2. (Optional) npm run call-gameover  (uses deployments/somnia.json)");
+  console.log("3. (Optional) Create Somnia reactivity subscription - see contracts/README.md");
 }
 
 main()

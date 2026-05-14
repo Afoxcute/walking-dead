@@ -25,6 +25,9 @@ export default class UIHomePage extends UIPage {
   private _btnSkin: cc.Node = null;
   private _btnWeapon: cc.Node = null;
 
+  /** Runtime "Claim STT" (pull leaderboard rewards); hidden when claimable is zero. */
+  private _claimSttBtn: cc.Node = null;
+
   private _playerSkin: cc.Node = null;
   private _aniUpgrade: sp.Skeleton = null;
   private _aniCaidai: sp.Skeleton = null;
@@ -253,7 +256,63 @@ export default class UIHomePage extends UIPage {
       cocosz.dataMgr.CurSkinId = this._showSkinId;
     }
 
+    this._ensureClaimSttButton();
     this.updateAccount();
+  }
+
+  private _ensureClaimSttButton() {
+    if (this._claimSttBtn && this._claimSttBtn.isValid) return;
+    const rankings = cc.find("BtnRankings", this._page);
+    if (!rankings || !rankings.parent) return;
+    if (typeof (window as any).claimNativeRewards !== "function") return;
+
+    const n = new cc.Node("BtnClaimStt");
+    n.setContentSize(200, 52);
+    n.addComponent(cc.Button);
+    const labNode = new cc.Node("Label");
+    const lab = labNode.addComponent(cc.Label);
+    lab.string = "Claim STT";
+    lab.fontSize = 22;
+    lab.lineHeight = 24;
+    lab.horizontalAlign = cc.Label.HorizontalAlign.CENTER;
+    lab.verticalAlign = cc.Label.VerticalAlign.CENTER;
+    labNode.setContentSize(200, 52);
+    n.addChild(labNode);
+    n.setPosition(rankings.x, rankings.y - 78);
+    n.parent = rankings.parent;
+    n.active = false;
+    n.on(
+      cc.Node.EventType.TOUCH_END,
+      async () => {
+        await cocosz.audioMgr.playBtnEffect().catch();
+        (window as any).claimNativeRewards?.(
+          () => {
+            Msg.Show("STT claim submitted");
+            this._refreshClaimButtonVisibility();
+          },
+          () => {
+            alert("Claim failed");
+          }
+        );
+      },
+      this
+    );
+    this._claimSttBtn = n;
+  }
+
+  private _refreshClaimButtonVisibility() {
+    this._ensureClaimSttButton();
+    if (!this._claimSttBtn || !this._claimSttBtn.isValid) return;
+    const w = window as any;
+    if (typeof w.getClaimableNative !== "function") return;
+    w.getClaimableNative((wei: bigint) => {
+      if (!this._claimSttBtn || !this._claimSttBtn.isValid) return;
+      try {
+        this._claimSttBtn.active = wei > BigInt(0);
+      } catch {
+        this._claimSttBtn.active = false;
+      }
+    });
   }
 
   updateAccount() {
@@ -312,6 +371,8 @@ export default class UIHomePage extends UIPage {
 
     cc.game.on(Constant.E_GAME_LOGIC, this._onGameMessageHandler, this);
     ReactivityBridge.tryStart();
+    this._ensureClaimSttButton();
+    this._refreshClaimButtonVisibility();
   }
 
   protected onClose() {
@@ -324,6 +385,7 @@ export default class UIHomePage extends UIPage {
         if (window.getPlayerAllAssets) {
           window.getPlayerAllAssets(() => {});
         }
+        this._refreshClaimButtonVisibility();
         break;
       }
       case Constant.E_Fly_Coin: {

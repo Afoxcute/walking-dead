@@ -20,6 +20,7 @@
  *   GAMEOVER_TIME=60       (default 60)
  *   GAMEOVER_KILLS=10      (default 10)
  *   SKIP_START=1           (skip startGame; gameOver will revert if no active game)
+ *   GAMEOVER_PROOF=0x...   required when `gameOverVerifier` is set on the contract (uses gameOverWithProof)
  */
 
 try {
@@ -34,6 +35,7 @@ const DEFAULT_GAME_ADDRESS = "0x468D2FCd8EBc64B885b3e8573A6e5eCE4687abAF";
 const GAMEOVER_TIME = parseInt(process.env.GAMEOVER_TIME || "60", 10);
 const GAMEOVER_KILLS = parseInt(process.env.GAMEOVER_KILLS || "10", 10);
 const SKIP_START = process.env.SKIP_START === "1" || process.env.SKIP_START === "true";
+const GAMEOVER_PROOF = process.env.GAMEOVER_PROOF || "0x";
 
 function getGameAddress() {
   if (process.env.GAME_CONTRACT_ADDRESS) return process.env.GAME_CONTRACT_ADDRESS;
@@ -61,8 +63,19 @@ async function main() {
   console.log("Network: somniaTestnet (Somnia Testnet)");
   console.log("Account:", signer.address);
   console.log("Contract:", GAME_ADDRESS);
+  const verifier = await game.gameOverVerifier();
+  const needsProof =
+    verifier && verifier.toLowerCase() !== hre.ethers.ZeroAddress.toLowerCase();
+  console.log("gameOverVerifier:", verifier, needsProof ? "(proof path)" : "(open gameOver)");
   console.log("gameOver(time, kills) =", GAMEOVER_TIME, GAMEOVER_KILLS);
   console.log("");
+
+  if (needsProof && (!GAMEOVER_PROOF || GAMEOVER_PROOF === "0x")) {
+    console.error(
+      "gameOverVerifier is non-zero: this script must use gameOverWithProof. Set env GAMEOVER_PROOF=0x<bytes> or clear the verifier on the contract."
+    );
+    process.exit(1);
+  }
 
   let blockAfterStart = null;
   if (!SKIP_START) {
@@ -98,16 +111,24 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("Step 2: gameOver(" + GAMEOVER_TIME + ", " + GAMEOVER_KILLS + ")...");
+  console.log("Step 2: " + (needsProof ? "gameOverWithProof" : "gameOver") + "(" + GAMEOVER_TIME + ", " + GAMEOVER_KILLS + ")...");
   try {
-    // Simulate at block after startGame so state is committed (some RPCs lag)
-    const simOpts = { gasLimit: 3_000_000 };
+    const simOpts = { gasLimit: needsProof ? 3_500_000 : 3_000_000 };
     if (blockAfterStart != null) simOpts.blockTag = blockAfterStart;
-    await game.gameOver.staticCall(
-      BigInt(GAMEOVER_TIME),
-      BigInt(GAMEOVER_KILLS),
-      simOpts
-    );
+    if (needsProof) {
+      await game.gameOverWithProof.staticCall(
+        BigInt(GAMEOVER_TIME),
+        BigInt(GAMEOVER_KILLS),
+        GAMEOVER_PROOF,
+        simOpts
+      );
+    } else {
+      await game.gameOver.staticCall(
+        BigInt(GAMEOVER_TIME),
+        BigInt(GAMEOVER_KILLS),
+        simOpts
+      );
+    }
     console.log("  Simulation: OK");
   } catch (simErr) {
     const msg = simErr.reason || simErr.message || String(simErr);
@@ -125,11 +146,14 @@ async function main() {
   }
 
   try {
-    const tx2 = await game.gameOver(
-      BigInt(GAMEOVER_TIME),
-      BigInt(GAMEOVER_KILLS),
-      { gasLimit: 3_000_000 }
-    );
+    const tx2 = needsProof
+      ? await game.gameOverWithProof(
+          BigInt(GAMEOVER_TIME),
+          BigInt(GAMEOVER_KILLS),
+          GAMEOVER_PROOF,
+          { gasLimit: 3_500_000 }
+        )
+      : await game.gameOver(BigInt(GAMEOVER_TIME), BigInt(GAMEOVER_KILLS), { gasLimit: 3_000_000 });
     console.log("  Tx hash:", tx2.hash);
     const rec2 = await tx2.wait();
     console.log("  Status:", rec2.status === 1 ? "success" : "reverted");

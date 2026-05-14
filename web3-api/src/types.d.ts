@@ -14,7 +14,15 @@ interface Window {
   getPlayerAllSkinInfo: (onSuccess?: (receipt: any) => void) => Promise<void>;
   // write function
   startGame: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  gameOver: (time: bigint, kills: bigint, onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
+  gameOver: (
+    time: bigint,
+    kills: bigint,
+    onSuccess?: (receipt: any) => void,
+    onError?: (receipt: any) => void,
+    proofHex?: string
+  ) => Promise<void>;
+  /** Native STT claimable for the connected wallet (leaderboard pull rewards). */
+  getClaimableNative: (onSuccess?: (wei: bigint) => void) => Promise<void>;
   buyOrUpgradeSkin: (id: bigint, onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   buyOrUpgradeWeapon: (id: bigint, onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   requestLottery: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
