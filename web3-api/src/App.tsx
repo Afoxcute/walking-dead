@@ -357,6 +357,32 @@ export function App() {
     }
   };
 
+  const claimNativeRewards = async (
+    onSuccess?: (receipt: unknown) => void,
+    onError?: (receipt: unknown) => void
+  ) => {
+    try {
+      if (address) {
+        const hash = await writeContractAsync({
+          address: GAME_CONTRACT_ADDRESS as `0x${string}`,
+          abi: GAME_ABI,
+          functionName: "claimNativeRewards",
+          args: [],
+          value: BigInt(0),
+        });
+        const resp = await waitForReceipt(hash);
+        if (resp) {
+          resp.status === "success" ? onSuccess?.(resp) : onError?.(resp);
+        }
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message != null && message !== "") {
+        alert(message);
+      }
+    }
+  };
+
   window.startGame = startGame;
   window.gameOver = gameOver;
   window.buyOrUpgradeSkin = buyOrUpgradeSkin;
@@ -364,6 +390,7 @@ export function App() {
   window.requestLottery = requestLottery;
   window.mintGold = mintGold;
   window.reLive = reLive;
+  window.claimNativeRewards = claimNativeRewards;
 
   // Somnia reactivity: off-chain and on-chain subscription API for Cocos / game
   window.reactivitySubscribeOffChain = async (opts) => {

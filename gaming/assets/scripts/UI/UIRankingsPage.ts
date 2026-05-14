@@ -88,13 +88,13 @@ export default class UIRankingsPanel extends UIPage {
       console.log("result:", result);
 
       let rankingsList = [];
-      let topGradeList = result[0];
-      let topTimeList = result[1];
+      let topKillsList = result[0];
+      let topSurvivalTimeList = result[1];
       let topPlayerList = result[2];
       let topPlayerChainHashList: any[] = result[3];
       let lastUpdateTime = result[4];
       for (let i = 0; i < 10; i++) {
-        let grade = parseInt(topGradeList[i]);
+        let grade = parseInt(topKillsList[i]);
         if (grade > 0) {
           let chainHash = topPlayerChainHashList[i];
           let chainName = "unknown";
@@ -131,7 +131,7 @@ export default class UIRankingsPanel extends UIPage {
           }
 
           rankingsList.push({
-            time: parseInt(topTimeList[i]),
+            time: parseInt(topSurvivalTimeList[i]),
             address: topPlayerList[i],
             grade: grade,
             chainName: chainName,

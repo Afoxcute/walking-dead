@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import { SomniaEventHandler } from "@somnia-chain/reactivity-contracts/contracts/SomniaEventHandler.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {SomniaEventHandler} from "@somnia-chain/reactivity-contracts/contracts/SomniaEventHandler.sol";
 
 // Universal Account ID Struct and IUEAFactory Interface
 struct UniversalAccountId {
@@ -14,62 +16,6 @@ interface IUEAFactory {
     function getOriginForUEA(address addr) external view returns (UniversalAccountId memory account, bool isUEA);
 }
 
-interface IOwnable {
-    /// @dev Returns the owner of the contract.
-    function owner() external view returns (address);
-
-    /// @dev Lets a module admin set a new owner for the contract. The new owner must be a module admin.
-    function setOwner(address _newOwner) external;
-
-    /// @dev Emitted when a new Owner is set.
-    event OwnerUpdated(address indexed prevOwner, address indexed newOwner);
-}
-
-abstract contract Ownable is IOwnable {
-    /// @dev The sender is not authorized to perform the action
-    error OwnableUnauthorized();
-
-    /// @dev Owner of the contract (purpose: OpenSea compatibility)
-    address private _owner;
-
-    /// @dev Reverts if caller is not the owner.
-    modifier onlyOwner() {
-        if (msg.sender != _owner) {
-            revert OwnableUnauthorized();
-        }
-        _;
-    }
-
-    /**
-     *  @notice Returns the owner of the contract.
-     */
-    function owner() public view override returns (address) {
-        return _owner;
-    }
-
-    /**
-     *  @notice Lets an authorized wallet set a new owner for the contract.
-     *  @param _newOwner The address to set as the new owner of the contract.
-     */
-    function setOwner(address _newOwner) external override {
-        if (!_canSetOwner()) {
-            revert OwnableUnauthorized();
-        }
-        _setupOwner(_newOwner);
-    }
-
-    /// @dev Lets a contract admin set a new owner for the contract. The new owner must be a contract admin.
-    function _setupOwner(address _newOwner) internal {
-        address _prevOwner = _owner;
-        _owner = _newOwner;
-
-        emit OwnerUpdated(_prevOwner, _newOwner);
-    }
-
-    /// @dev Returns whether owner can be set in the given execution context.
-    function _canSetOwner() internal view virtual returns (bool);
-}
-
 interface IUltraVerifier {
     function getVerificationKeyHash() external pure returns (bytes32);
 
@@ -79,31 +25,58 @@ interface IUltraVerifier {
     ) external view returns (bool);
 }
 
-contract ZKGameClient is Ownable, SomniaEventHandler {
+/// @title ZKGameClient
+/// @custom:security Lottery (`requestLottery`) uses on-chain pseudorandomness (`_lotteryEntropyWord`), not a VRF.
+/// Block builders can bias `block.prevrandao` and ordering within a block. This is materially harder to game than
+/// `salt + block.timestamp` but is **not** trust-minimized. For production-grade fairness, wire an oracle VRF
+/// (e.g. Chainlink) or Somnia’s dedicated randomness primitive when available.
+contract ZKGameClient is Ownable, ReentrancyGuard, SomniaEventHandler {
+    // --- Custom errors -------------------------------------------------------------------------
+    error InsufficientValue();
+    error NotGamePlayer();
+    error NoActiveGame();
+    error KillsOutOfBounds();
+    error TimeOutOfBounds();
+    error SessionExpired();
+    error GameOverProofRequired();
+    error InvalidProof();
+    error InvalidSkinId();
+    error MaxSkinLevel();
+    error MaxWeaponLevel();
+    error InsufficientGold();
+    error InsufficientDiamond();
+    error UnknownItem();
+    error UnsupportedPriceType();
+    error NoLotteryYet();
+    error ZeroAddress();
+    error NativeTransferFailed();
+    error NothingToClaim();
+    error RescueExceedsBalance();
+
     // 0: Gold; 1: Diamond;
     struct PriceItem {
-        uint priceType;
-        uint price;
+        uint256 priceType;
+        uint256 price;
     }
 
     struct MessageItem {
         address player;
-        uint time;
-        uint kills;
+        uint256 time;
+        uint256 kills;
     }
 
     // 0: Gold; 1: Diamond; 2: skin; 3: Weapon
     struct LotteryItem {
-        uint itemType;
-        uint num;
+        uint256 itemType;
+        uint256 num;
     }
 
-    struct GameLog{
-        uint startTime;
-        uint endTime;
+    struct GameLog {
+        uint256 startTime;
+        uint256 endTime;
         address player;
-        uint reLive;
-        uint grade;
+        uint256 reLive;
+        uint256 grade;
     }
 
     event RequestLottery(
@@ -113,11 +86,11 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
     );
 
     event GameLogEvent(
-        uint startTime,
-        uint endTime,
+        uint256 startTime,
+        uint256 endTime,
         address player,
-        uint grade,
-        uint reLive
+        uint256 grade,
+        uint256 reLive
     );
 
     /// @dev Emitted when the reactivity handler processes a GameLogEvent (from this or another game contract).
@@ -127,50 +100,53 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
     uint256 public reactivityInvocationCount;
 
     // Lottery
-    uint256 public totalLotteryTimes = 0;
+    uint256 public totalLotteryTimes;
     LotteryItem[] public LotteryItemList;
-    mapping(address => uint256) public playerLastlotteryResultIndexMap; /*  address --> requestId */
+    mapping(address => uint256) public playerLastlotteryResultIndexMap;
+    /// @dev Number of completed lottery draws per player; `0` means `getPlayerLastLotteryResult` is undefined.
+    mapping(address => uint256) public playerLotteryDrawCount;
 
-    // player's weapon
-    mapping(address => uint[]) public playerWeaponMap; /* player --> uint[] */
-    mapping(address => mapping(uint=>uint)) public playerWeaponLevelMap; /* player --> id ->level*/
-    mapping(address => uint[]) public playerSkinMap; /* player --> uint[] */
-    mapping(address => mapping(uint=>uint)) public playerSkinLevelMap; /* player --> id ->level*/
-    mapping(address => uint) public playerGoldMap; /* player --> uint */
-    mapping(address => uint) public playerDiamondMap; /* player --> uint */
+    // player's weapon / skin (enumeration arrays + O(1) ownership flags)
+    mapping(address => uint256[]) public playerWeaponMap;
+    mapping(address => mapping(uint256 => uint256)) public playerWeaponLevelMap;
+    mapping(address => uint256[]) public playerSkinMap;
+    mapping(address => mapping(uint256 => uint256)) public playerSkinLevelMap;
+    mapping(address => mapping(uint256 => bool)) public playerHasWeapon;
+    mapping(address => mapping(uint256 => bool)) public playerHasSkin;
 
-    /// topList
-    uint[10] public topGradeList; // Top 10 grade List, kills
-    uint[10] public topTimeList; // Top 10 grade List, timestamp
-    address[10] public topPlayerList; // Top 10 player List, address
-    bytes32[10] public topPlayerChainHashList; // Top 10 player chainHash List, bytes32
-    uint public lastUpdateTime; // last update time of topList
+    mapping(address => uint256) public playerGoldMap;
+    mapping(address => uint256) public playerDiamondMap;
+
+    /// @dev Leaderboard: `topKillsList` stores kill counts (higher is better). `topSurvivalTimeList` stores survival time for that run.
+    uint256[10] public topKillsList;
+    uint256[10] public topSurvivalTimeList;
+    address[10] public topPlayerList;
+    bytes32[10] public topPlayerChainHashList;
+    uint256 public lastUpdateTime;
+
+    /// @notice Native STT owed to a player (rank #1 rewards, etc.); claim via `claimNativeRewards`.
+    mapping(address => uint256) public claimableNative;
 
     /// @notice Optional UltraHonk verifier for `gameOverWithProof` (address(0) = verification disabled).
     address public gameOverVerifier;
 
     event GameOverVerifierSet(address indexed verifier);
 
-    /// log
-    mapping(address => uint) public playerLatestGameLogIdMap; // id => GameLog
-    mapping(uint => GameLog) public gameLogMap; // id => GameLog
-    uint public totalGame = 0;
+    mapping(address => uint256) public playerLatestGameLogIdMap;
+    mapping(uint256 => GameLog) public gameLogMap;
+    uint256 public totalGame;
 
-    // weapon upgrade
-    mapping(uint => PriceItem) public weaponPriceMap; // id => price
-    uint[] public weaponLevelPriceList;
-    // skin upgrade
-    mapping(uint => PriceItem) public skinPriceMap; // id => price
-    uint[] public skinLevelPriceList;
+    mapping(uint256 => PriceItem) public weaponPriceMap;
+    uint256[] public weaponLevelPriceList;
+    mapping(uint256 => PriceItem) public skinPriceMap;
+    uint256[] public skinLevelPriceList;
 
-    constructor(){
-        _setupOwner(msg.sender);
-        initWeaponAndSkinData();
-        initLotteryList();
+    constructor() Ownable(msg.sender) {
+        _initWeaponAndSkinData();
+        _initLotteryList();
     }
 
-    function initWeaponAndSkinData() public onlyOwner {
-        // weapon price
+    function _initWeaponAndSkinData() private {
         weaponPriceMap[0] = PriceItem(0, 0);
         weaponPriceMap[1] = PriceItem(0, 1000);
         weaponPriceMap[5] = PriceItem(0, 1500);
@@ -182,20 +158,17 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         weaponPriceMap[16] = PriceItem(0, 3000);
         weaponPriceMap[18] = PriceItem(1, 1000);
 
-        // skin price
         skinPriceMap[0] = PriceItem(0, 0);
         skinPriceMap[1] = PriceItem(0, 1000);
         skinPriceMap[2] = PriceItem(0, 2500);
         skinPriceMap[3] = PriceItem(1, 1000);
 
-        // weapon leavel price (glod)
-        weaponLevelPriceList.push(0); // new weapon
+        weaponLevelPriceList.push(0);
         weaponLevelPriceList.push(100);
         weaponLevelPriceList.push(300);
         weaponLevelPriceList.push(600);
-                
-        // skin leavel price (glod)
-        skinLevelPriceList.push(0); // new skin
+
+        skinLevelPriceList.push(0);
         skinLevelPriceList.push(100);
         skinLevelPriceList.push(200);
         skinLevelPriceList.push(300);
@@ -204,24 +177,50 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         skinLevelPriceList.push(600);
     }
 
-    // lottery
-    function initLotteryList() public onlyOwner {
-        // LotteryItemList.push(LotteryItem(0,100));
-        // LotteryItemList.push(LotteryItem(0,50));
-        LotteryItemList.push(LotteryItem(1,10));
-        LotteryItemList.push(LotteryItem(0,50));
-        LotteryItemList.push(LotteryItem(0,150));
-        LotteryItemList.push(LotteryItem(3,18));
-        LotteryItemList.push(LotteryItem(0,200));
-        // LotteryItemList.push(LotteryItem(0,50));
-        LotteryItemList.push(LotteryItem(1,20));
-        LotteryItemList.push(LotteryItem(2,1));
-        // LotteryItemList.push(LotteryItem(0,200));
-        LotteryItemList.push(LotteryItem(3,9));
+    function _initLotteryList() private {
+        LotteryItemList.push(LotteryItem(1, 10));
+        LotteryItemList.push(LotteryItem(0, 50));
+        LotteryItemList.push(LotteryItem(0, 150));
+        LotteryItemList.push(LotteryItem(3, 18));
+        LotteryItemList.push(LotteryItem(0, 200));
+        LotteryItemList.push(LotteryItem(1, 20));
+        LotteryItemList.push(LotteryItem(2, 1));
+        LotteryItemList.push(LotteryItem(3, 9));
     }
 
-    function distribution(address payable winner, uint amount) internal {
-        winner.transfer(amount);
+    /// @dev Send native token with full gas forwarded (smart-wallet safe). CEI: use only after state updates when needed.
+    function _sendValue(address payable to, uint256 amount) internal {
+        if (amount == 0) return;
+        (bool ok, ) = to.call{value: amount}("");
+        if (!ok) revert NativeTransferFailed();
+    }
+
+    function _currentTopPlayer() internal view returns (address) {
+        return topPlayerList[0];
+    }
+
+    /// @dev Credits the current #1 player; if none is set, native remains in the contract (see `rescueNative`).
+    function _accrueToLeader(uint256 amount) internal {
+        if (amount == 0) return;
+        address top = _currentTopPlayer();
+        if (top != address(0)) {
+            claimableNative[top] += amount;
+        }
+    }
+
+    /// @notice Pull-based payout for leaderboard rewards (and similar). Reentrancy-safe.
+    function claimNativeRewards() external nonReentrant {
+        uint256 amt = claimableNative[msg.sender];
+        if (amt == 0) revert NothingToClaim();
+        claimableNative[msg.sender] = 0;
+        _sendValue(payable(msg.sender), amt);
+    }
+
+    /// @notice Emergency native recovery; does not reconcile `claimableNative` — use only with care (e.g. testnet).
+    function rescueNative(address payable to, uint256 amount) external onlyOwner nonReentrant {
+        if (to == address(0)) revert ZeroAddress();
+        if (amount > address(this).balance) revert RescueExceedsBalance();
+        _sendValue(to, amount);
     }
 
     function setGameOverVerifier(address v) external onlyOwner {
@@ -230,35 +229,27 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
     }
 
     /// @dev Grant skin from lottery: new skin unlock, or +1 level if already owned (capped).
-    function _grantLotterySkin(address player, uint skinId) internal {
-        require(skinPriceMap[skinId].price > 0 || skinId == 0, "Invalid skin id");
-        uint[] storage owned = playerSkinMap[player];
-        bool found = false;
-        for (uint i = 0; i < owned.length; i++) {
-            if (owned[i] == skinId) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            playerSkinMap[player].push(skinId);
-        } else {
-            uint lv = playerSkinLevelMap[player][skinId];
+    function _grantLotterySkin(address player, uint256 skinId) internal {
+        if (!(skinPriceMap[skinId].price > 0 || skinId == 0)) revert InvalidSkinId();
+        if (playerHasSkin[player][skinId]) {
+            uint256 lv = playerSkinLevelMap[player][skinId];
             if (lv < skinLevelPriceList.length - 1) {
                 playerSkinLevelMap[player][skinId]++;
             }
+        } else {
+            playerSkinMap[player].push(skinId);
+            playerHasSkin[player][skinId] = true;
         }
     }
 
-    /// @dev Bounds and session window; full trustlessness needs a circuit + `gameOverWithProof`.
-    function _enforceGameOverScores(uint time, uint kills, uint logId) internal view {
-        require(gameLogMap[logId].startTime > 0, "no game");
-        require(kills <= 1_000_000_000, "kills OOB");
-        require(time <= 1_000_000_000_000, "score OOB");
-        require(block.timestamp - gameLogMap[logId].startTime <= 7 days, "session expired");
+    function _enforceGameOverScores(uint256 time, uint256 kills, uint256 logId) internal view {
+        if (gameLogMap[logId].startTime == 0) revert NoActiveGame();
+        if (kills > 1_000_000_000) revert KillsOutOfBounds();
+        if (time > 1_000_000_000_000) revert TimeOutOfBounds();
+        if (block.timestamp - gameLogMap[logId].startTime > 7 days) revert SessionExpired();
     }
 
-    function _finalizeGameOver(uint logId, uint time, uint kills) internal {
+    function _finalizeGameOver(uint256 logId, uint256 time, uint256 kills) internal {
         gameLogMap[logId].endTime = block.timestamp;
         gameLogMap[logId].grade = time;
         pushDataToTopList(MessageItem(msg.sender, time, kills));
@@ -276,209 +267,188 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         );
     }
 
-    function startGame() public payable {
-        // pay gas token
-        uint gasTokenAmountToPay = 10**16; // 0.01 STT
-        require(msg.value >= gasTokenAmountToPay,"Gas Token is not enough!");
+    /// @dev Accrue fixed ticket to leader, refund any overpayment to the payer.
+    function _takeTicketAccrueLeaderRefundExcess(uint256 ticket) internal {
+        if (msg.value < ticket) revert InsufficientValue();
+        _accrueToLeader(ticket);
+        uint256 excess = msg.value - ticket;
+        if (excess > 0) {
+            _sendValue(payable(msg.sender), excess);
+        }
+    }
 
-        // save log
+    function startGame() external payable nonReentrant {
+        uint256 ticket = 10 ** 16; // 0.01 STT
+        _takeTicketAccrueLeaderRefundExcess(ticket);
+
         playerLatestGameLogIdMap[msg.sender] = totalGame;
         gameLogMap[totalGame].startTime = block.timestamp;
         gameLogMap[totalGame].player = msg.sender;
-        totalGame = totalGame + 1;
-
-        // distribution
-        address payable top1Player = payable(topPlayerList[0]);
-        uint balance = address(this).balance;
-        if(balance >0 && top1Player != address(0)) {
-            distribution(top1Player, balance);
+        unchecked {
+            totalGame++;
         }
     }
 
-    function reLive() public payable {
-        // pay gas token
-        uint gasTokenAmountToPay = 5*10**16; // 0.05 STT
-        require(msg.value >= gasTokenAmountToPay,"Gas Token is not enough!");
-
-        // distribution
-        address payable top1Player = payable(topPlayerList[0]);
-        uint balance = address(this).balance;
-        if(balance >0 && top1Player != address(0)) {
-            distribution(top1Player, balance);
-        }
+    function reLive() external payable nonReentrant {
+        uint256 ticket = 5 * 10 ** 16; // 0.05 STT
+        _takeTicketAccrueLeaderRefundExcess(ticket);
     }
 
-    function testWeaponSkin() external onlyOwner {
-        playerWeaponMap[msg.sender].push(5);
-        playerWeaponMap[msg.sender].push(15);
-        playerSkinMap[msg.sender].push(2);
-        playerGoldMap[msg.sender] = 999999;
-        playerDiamondMap[msg.sender] = 999999;
-    }
-
-    function getPlayerAllWeaponInfo(address player) external view returns(uint[] memory weaponIdList, uint[] memory weaponLevelList) {
+    function getPlayerAllWeaponInfo(address player) external view returns (uint256[] memory weaponIdList, uint256[] memory weaponLevelList) {
         weaponIdList = playerWeaponMap[player];
-        weaponLevelList = new uint[](weaponIdList.length);
-        for(uint i=0; i < weaponIdList.length; i++) {
+        weaponLevelList = new uint256[](weaponIdList.length);
+        for (uint256 i = 0; i < weaponIdList.length; i++) {
             weaponLevelList[i] = playerWeaponLevelMap[player][weaponIdList[i]];
         }
         return (weaponIdList, weaponLevelList);
     }
 
-    function getPlayerAllSkinInfo(address player) external view returns(uint[] memory skinIdList, uint[] memory skinLevelList) {
+    function getPlayerAllSkinInfo(address player) external view returns (uint256[] memory skinIdList, uint256[] memory skinLevelList) {
         skinIdList = playerSkinMap[player];
-        skinLevelList = new uint[](skinIdList.length);
-        for(uint i=0; i < skinIdList.length; i++) {
+        skinLevelList = new uint256[](skinIdList.length);
+        for (uint256 i = 0; i < skinIdList.length; i++) {
             skinLevelList[i] = playerSkinLevelMap[player][skinIdList[i]];
         }
         return (skinIdList, skinLevelList);
     }
 
-    function buyOrUpgradeSkin(uint id) external {
-        uint[] memory skinList = playerSkinMap[msg.sender];
-        bool found = false;
-        for(uint i=0; i<skinList.length; i++) {
-            if(skinList[i] == id) {
-                found = true;
+    /// @dev Shared buy/upgrade path for skins and weapons (`isSkin == true` → skin catalog).
+    function _buyOrUpgradeCatalog(bool isSkin, uint256 id) private {
+        mapping(uint256 => PriceItem) storage priceMap = isSkin ? skinPriceMap : weaponPriceMap;
+        uint256[] storage levelPrices = isSkin ? skinLevelPriceList : weaponLevelPriceList;
+        mapping(address => mapping(uint256 => uint256)) storage levelMap = isSkin ? playerSkinLevelMap : playerWeaponLevelMap;
+        mapping(address => uint256[]) storage idList = isSkin ? playerSkinMap : playerWeaponMap;
+        mapping(address => mapping(uint256 => bool)) storage hasMap = isSkin ? playerHasSkin : playerHasWeapon;
+
+        bool owns = (id == 0) || hasMap[msg.sender][id];
+
+        if (owns) {
+            uint256 currentLevel = levelMap[msg.sender][id];
+            if (currentLevel >= levelPrices.length - 1) {
+                if (isSkin) revert MaxSkinLevel();
+                else revert MaxWeaponLevel();
             }
-        }
-        if(found || id == 0) {
-            // upgrade
-            uint currentLevel = playerSkinLevelMap[msg.sender][id];
-            require(currentLevel < skinLevelPriceList.length -1, "Your skin is reached the highest level");
-            uint goldPrice = skinLevelPriceList[currentLevel+1];
-            uint goldNum = playerGoldMap[msg.sender];
-            require(goldNum >= goldPrice, 'Your gold is not enough!');
+            uint256 goldPrice = levelPrices[currentLevel + 1];
+            if (playerGoldMap[msg.sender] < goldPrice) revert InsufficientGold();
             playerGoldMap[msg.sender] -= goldPrice;
-            playerSkinLevelMap[msg.sender][id]++;
+            levelMap[msg.sender][id]++;
         } else {
-            // buy
-            PriceItem memory priceItem = skinPriceMap[id];
-            if(priceItem.priceType == 0) {
-                uint goldNum = playerGoldMap[msg.sender];
-                require(goldNum >= priceItem.price, 'Your gold is not enough!');
+            PriceItem memory priceItem = priceMap[id];
+            if (priceItem.price == 0 && id != 0) revert UnknownItem();
+            if (priceItem.priceType == 0) {
+                if (playerGoldMap[msg.sender] < priceItem.price) revert InsufficientGold();
                 playerGoldMap[msg.sender] -= priceItem.price;
-                playerSkinMap[msg.sender].push(id);
-            } else if(priceItem.priceType == 1) {
-                uint diamondNum =  playerDiamondMap[msg.sender];
-                require(diamondNum >= priceItem.price, 'Your diamond is not enough!');
+                idList[msg.sender].push(id);
+                hasMap[msg.sender][id] = true;
+            } else if (priceItem.priceType == 1) {
+                if (playerDiamondMap[msg.sender] < priceItem.price) revert InsufficientDiamond();
                 playerDiamondMap[msg.sender] -= priceItem.price;
-                playerSkinMap[msg.sender].push(id);
+                idList[msg.sender].push(id);
+                hasMap[msg.sender][id] = true;
+            } else {
+                revert UnsupportedPriceType();
             }
         }
     }
 
-    function buyOrUpgradeWeapon(uint id) external {
-        uint[] memory weaponList = playerWeaponMap[msg.sender];
-        bool found = false;
-        for(uint i=0; i<weaponList.length; i++) {
-            if(weaponList[i] == id) {
-                found = true;
-            }
-        }
-        if(found || id == 0) {
-            // upgrade
-            uint currentLevel = playerWeaponLevelMap[msg.sender][id];
-            require(currentLevel < weaponLevelPriceList.length -1, "Your weapon is reached the highest level");
-            uint goldPrice = weaponLevelPriceList[currentLevel+1];
-            uint goldNum = playerGoldMap[msg.sender];
-            require(goldNum >= goldPrice, 'Your gold is not enough!');
-            playerGoldMap[msg.sender] -= goldPrice;
-            playerWeaponLevelMap[msg.sender][id]++;
-        } else {
-            // buy
-            PriceItem memory priceItem = weaponPriceMap[id];
-            if(priceItem.priceType == 0) {
-                uint goldNum = playerGoldMap[msg.sender];
-                require(goldNum >= priceItem.price, 'Your gold is not enough!');
-                playerGoldMap[msg.sender] -= priceItem.price;
-                playerWeaponMap[msg.sender].push(id);
-            } else if(priceItem.priceType == 1) {
-                uint diamondNum =  playerDiamondMap[msg.sender];
-                require(diamondNum >= priceItem.price, 'Your diamond is not enough!');
-                playerDiamondMap[msg.sender] -= priceItem.price;
-                playerWeaponMap[msg.sender].push(id);
-            }
-        }
+    function buyOrUpgradeSkin(uint256 id) external {
+        _buyOrUpgradeCatalog(true, id);
     }
 
-    function mintGold()  external payable {
-        // pay gas token
-        uint gasTokenAmountToPay = 10**16; // 0.01 STT
-        require(msg.value >= gasTokenAmountToPay,"Gas Token is not enough!");
+    function buyOrUpgradeWeapon(uint256 id) external {
+        _buyOrUpgradeCatalog(false, id);
+    }
+
+    function mintGold() external payable nonReentrant {
+        uint256 ticket = 10 ** 16; // 0.01 STT
+        if (msg.value < ticket) revert InsufficientValue();
         playerGoldMap[msg.sender] += 500;
+        _accrueToLeader(msg.value);
     }
 
-    // random number generator
-    function VRF(uint256 salt) public view returns (uint256) {
-        return salt + block.timestamp;
-    }
+    // --- Lottery entropy (explicitly NOT an oracle VRF) -------------------------------------------
 
-    // lottery
-    function requestLottery() external payable {
-        // pay gas token
-        uint gasTokenAmountToPay = 4*10**16; // 0.04 STT
-        require(msg.value >= gasTokenAmountToPay,"Gas Token is not enough!");
-
-        totalLotteryTimes = totalLotteryTimes + 1;
-
-        // get random from VRF
-        uint256 random = VRF(totalLotteryTimes);
-
-        // get lottery reault
-        uint len = LotteryItemList.length;
-        uint index = random % len;
-        LotteryItem memory item = LotteryItemList[index];
-
-        playerLastlotteryResultIndexMap[msg.sender] = index;
-
-        // distribution rewards
-        if(item.itemType == 0) {
-            // mint gold
-            playerGoldMap[msg.sender] += item.num;
-        } else if(item.itemType == 1) {
-            // mint diamond
-            playerDiamondMap[msg.sender] += item.num;
-        } else if(item.itemType == 2) {
-            _grantLotterySkin(msg.sender, item.num);
-        } else if(item.itemType == 3) {
-            // mint weapon
-            playerWeaponMap[msg.sender].push(item.num);
-        }
-
-        emit RequestLottery(
-            totalLotteryTimes,
-            random,
-            item
+    function _lotteryEntropyWord(address player, uint256 salt) internal view returns (uint256) {
+        return uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.prevrandao,
+                    block.timestamp,
+                    block.number,
+                    player,
+                    salt,
+                    address(this)
+                )
+            )
         );
     }
 
-    // lottery
-    function getPlayerLastLotteryResult(address player) external view returns (uint itemType,uint num) {
+    /// @notice Preview the pseudorandom word used for lottery mixing for a given `player` and `salt`.
+    /// @dev Matches `_lotteryEntropyWord`. For the next on-chain draw, `salt` is `totalLotteryTimes + 1`
+    ///      (the value **after** the increment performed inside `requestLottery`).
+    function previewLotteryEntropyWord(address player, uint256 salt) external view returns (uint256) {
+        return _lotteryEntropyWord(player, salt);
+    }
+
+    function requestLottery() external payable nonReentrant {
+        uint256 ticket = 4 * 10 ** 16; // 0.04 STT
+        if (msg.value < ticket) revert InsufficientValue();
+
+        unchecked {
+            totalLotteryTimes++;
+        }
+
+        uint256 random = _lotteryEntropyWord(msg.sender, totalLotteryTimes);
+
+        uint256 len = LotteryItemList.length;
+        uint256 index = random % len;
+        LotteryItem memory item = LotteryItemList[index];
+
+        playerLastlotteryResultIndexMap[msg.sender] = index;
+        unchecked {
+            playerLotteryDrawCount[msg.sender]++;
+        }
+
+        if (item.itemType == 0) {
+            playerGoldMap[msg.sender] += item.num;
+        } else if (item.itemType == 1) {
+            playerDiamondMap[msg.sender] += item.num;
+        } else if (item.itemType == 2) {
+            _grantLotterySkin(msg.sender, item.num);
+        } else if (item.itemType == 3) {
+            playerWeaponMap[msg.sender].push(item.num);
+            playerHasWeapon[msg.sender][item.num] = true;
+        }
+
+        emit RequestLottery(totalLotteryTimes, random, item);
+
+        _accrueToLeader(msg.value);
+    }
+
+    function getPlayerLastLotteryResult(address player) external view returns (uint256 itemType, uint256 num) {
+        if (playerLotteryDrawCount[player] == 0) revert NoLotteryYet();
         uint256 index = playerLastlotteryResultIndexMap[player];
         LotteryItem memory item = LotteryItemList[index];
         return (item.itemType, item.num);
     }
 
-
-    // player info
-    function getPlayerAllAssets(address player) external view returns(uint gold,uint diamond) {
+    function getPlayerAllAssets(address player) external view returns (uint256 gold, uint256 diamond) {
         return (playerGoldMap[player], playerDiamondMap[player]);
     }
 
-    /// @notice Submit a run without SNARK verification (compatible with existing clients).
-    function gameOver(uint time, uint kills) external {
-        uint logId = playerLatestGameLogIdMap[msg.sender];
-        require(gameLogMap[logId].player == msg.sender, "Call startGame first");
+    /// @notice Submit a run without SNARK verification **only while** `gameOverVerifier` is unset.
+    function gameOver(uint256 time, uint256 kills) external {
+        if (gameOverVerifier != address(0)) revert GameOverProofRequired();
+        uint256 logId = playerLatestGameLogIdMap[msg.sender];
+        if (gameLogMap[logId].player != msg.sender) revert NotGamePlayer();
         _enforceGameOverScores(time, kills, logId);
         _finalizeGameOver(logId, time, kills);
     }
 
-    /// @notice Same as `gameOver` but verifies `proof` when `gameOverVerifier` is set (UltraHonk-style verifier).
-    /// @dev Public inputs are fixed layout: [bytes32(uint160(player)), bytes32(logId), bytes32(time), bytes32(kills)] — must match your circuit.
-    function gameOverWithProof(uint time, uint kills, bytes calldata proof) external {
-        uint logId = playerLatestGameLogIdMap[msg.sender];
-        require(gameLogMap[logId].player == msg.sender, "Call startGame first");
+    /// @notice Verified game-over path; when `gameOverVerifier` is set, proof must verify.
+    function gameOverWithProof(uint256 time, uint256 kills, bytes calldata proof) external {
+        uint256 logId = playerLatestGameLogIdMap[msg.sender];
+        if (gameLogMap[logId].player != msg.sender) revert NotGamePlayer();
         _enforceGameOverScores(time, kills, logId);
 
         if (gameOverVerifier != address(0)) {
@@ -487,43 +457,41 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
             pub[1] = bytes32(logId);
             pub[2] = bytes32(time);
             pub[3] = bytes32(kills);
-            require(IUltraVerifier(gameOverVerifier).verify(proof, pub), "Invalid proof");
+            if (!IUltraVerifier(gameOverVerifier).verify(proof, pub)) revert InvalidProof();
         }
 
         _finalizeGameOver(logId, time, kills);
     }
 
-    /// Use binary search algorithm
+    /// @dev Binary search insert by kills; `topSurvivalTimeList` stores the survival `time` for that row.
     function pushDataToTopList(MessageItem memory messageItem) internal {
-        uint time = messageItem.time;
-        uint kills = messageItem.kills;
+        uint256 time = messageItem.time;
+        uint256 kills = messageItem.kills;
         address player = messageItem.player;
 
-        // Use default chain hash (e.g. Somnia/STT). Skip UEA lookup at 0xea to avoid reverts
-        // on chains where 0xea is missing or returns incompatible data.
         bytes32 chainHash = "STT";
-        if (topGradeList[topGradeList.length -1] < kills) {
-            uint left = 0;
-            uint right = topGradeList.length - 1;
-            uint mid;
+        if (topKillsList[topKillsList.length - 1] < kills) {
+            uint256 left = 0;
+            uint256 right = topKillsList.length - 1;
+            uint256 mid;
 
             while (left < right) {
                 mid = (left + right) / 2;
-                if (topGradeList[mid] < kills) {
+                if (topKillsList[mid] < kills) {
                     right = mid;
                 } else {
                     left = mid + 1;
                 }
             }
 
-            for(uint i = topGradeList.length - 1; i > left; i--) {
-                topGradeList[i] = topGradeList[i - 1];
-                topTimeList[i] = topTimeList[i - 1];
+            for (uint256 i = topKillsList.length - 1; i > left; i--) {
+                topKillsList[i] = topKillsList[i - 1];
+                topSurvivalTimeList[i] = topSurvivalTimeList[i - 1];
                 topPlayerList[i] = topPlayerList[i - 1];
                 topPlayerChainHashList[i] = topPlayerChainHashList[i - 1];
             }
-            topGradeList[left] = kills;
-            topTimeList[left] = time;
+            topKillsList[left] = kills;
+            topSurvivalTimeList[left] = time;
             topPlayerList[left] = player;
             topPlayerChainHashList[left] = chainHash;
         }
@@ -531,13 +499,15 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
         lastUpdateTime = block.timestamp;
     }
 
-    function getTopListInfo() public view returns (uint[10] memory , uint[10] memory, address[10] memory, bytes32[10] memory, uint) {
-        return (topGradeList, topTimeList, topPlayerList, topPlayerChainHashList, lastUpdateTime);
+    function getTopListInfo()
+        public
+        view
+        returns (uint256[10] memory, uint256[10] memory, address[10] memory, bytes32[10] memory, uint256)
+    {
+        return (topKillsList, topSurvivalTimeList, topPlayerList, topPlayerChainHashList, lastUpdateTime);
     }
 
     /// @notice Somnia reactivity: called by the chain when a subscribed event matches (e.g. GameLogEvent).
-    /// @param emitter Address of the contract that emitted the event.
-    /// @param data ABI-encoded non-indexed event parameters.
     function _onEvent(
         address emitter,
         bytes32[] calldata /* eventTopics */,
@@ -545,17 +515,12 @@ contract ZKGameClient is Ownable, SomniaEventHandler {
     ) internal override {
         reactivityInvocationCount += 1;
 
-        // Only react to GameLogEvent-shaped payloads (same as this contract's GameLogEvent).
-        // GameLogEvent(uint256,uint256,address,uint256,uint256) - all non-indexed, so full decode from data.
         if (data.length >= 32 * 5) {
-            (, , address player, uint256 grade, ) =
+            (, , address player, uint256 grade, uint256 reLive) =
                 abi.decode(data, (uint256, uint256, address, uint256, uint256));
-            // Avoid reentrancy: do not call back into game logic; only emit a separate event.
             emit ReactedToGameLog(emitter, player, grade);
         }
     }
-
-    function _canSetOwner() internal virtual view override returns (bool) {
-        return msg.sender == owner();
-    }
 }
+
+

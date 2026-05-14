@@ -20,6 +20,8 @@ interface Window {
   requestLottery: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   mintGold: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   reLive: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
+  /** Pull accrued native (STT) leaderboard rewards to the connected wallet (#1 must call after others pay). */
+  claimNativeRewards: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
   // Somnia reactivity (off-chain + on-chain)
   /** Callback for reactivity off-chain subscription data (set by game before subscribe). */
   onReactivityData?: (data: unknown) => void;

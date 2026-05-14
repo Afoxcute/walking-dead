@@ -16,8 +16,25 @@ export const GAME_ABI = [
 		"type": "constructor"
 	},
 	{
-		"inputs": [],
-		"name": "OwnableUnauthorized",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "OwnableUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "OwnableInvalidOwner",
 		"type": "error"
 	},
 	{
@@ -63,7 +80,7 @@ export const GAME_ABI = [
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "prevOwner",
+				"name": "previousOwner",
 				"type": "address"
 			},
 			{
@@ -73,7 +90,7 @@ export const GAME_ABI = [
 				"type": "address"
 			}
 		],
-		"name": "OwnerUpdated",
+		"name": "OwnershipTransferred",
 		"type": "event"
 	},
 	{
@@ -140,12 +157,17 @@ export const GAME_ABI = [
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
 				"internalType": "uint256",
 				"name": "salt",
 				"type": "uint256"
 			}
 		],
-		"name": "VRF",
+		"name": "previewLotteryEntropyWord",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -419,20 +441,6 @@ export const GAME_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "initLotteryList",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "initWeaponAndSkinData",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "lastUpdateTime",
 		"outputs": [
 			{
@@ -492,6 +500,117 @@ export const GAME_ABI = [
 			}
 		],
 		"name": "playerGoldMap",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "claimableNative",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "claimNativeRewards",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "rescueNative",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "playerHasSkin",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "playerHasWeapon",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "playerLotteryDrawCount",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -654,11 +773,18 @@ export const GAME_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_newOwner",
+				"name": "newOwner",
 				"type": "address"
 			}
 		],
-		"name": "setOwner",
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -714,13 +840,6 @@ export const GAME_ABI = [
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "testWeaponSkin",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -728,7 +847,7 @@ export const GAME_ABI = [
 				"type": "uint256"
 			}
 		],
-		"name": "topGradeList",
+		"name": "topKillsList",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -785,7 +904,7 @@ export const GAME_ABI = [
 				"type": "uint256"
 			}
 		],
-		"name": "topTimeList",
+		"name": "topSurvivalTimeList",
 		"outputs": [
 			{
 				"internalType": "uint256",
