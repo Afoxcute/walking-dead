@@ -46,23 +46,13 @@ export default class NewClass extends cc.Component {
   }
 
   watchAD() {
+    const num = 500;
     if (this.isDiamond) {
-      window.mintGold(()=>{
-        let num = 500;
-        cocosz.dataMgr.DiamondCount += num;
-        Msg.Show(i18n.t("msg.gxhdzs") + num);
-      },()=>{
-
-      });
-      
+      cocosz.dataMgr.DiamondCount += num;
+      Msg.Show(i18n.t("msg.gxhdzs") + num);
     } else {
-      window.mintGold(()=>{
-        let num = 500;
-        cocosz.dataMgr.DiamondCount += num;
-        Msg.Show(i18n.t("msg.gxhdzs") + num);
-      },()=>{
-
-      });
+      cocosz.dataMgr.CoinCount += num;
+      Msg.Show(i18n.t("msg.gxhdjb") + num);
     }
     this.node.destroy();
   }

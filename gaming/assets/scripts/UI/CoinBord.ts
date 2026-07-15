@@ -59,18 +59,10 @@ export default class CoinBord extends cc.Component {
   }
 
   private _updateLabel() {
-    if( window.getPlayerAllAssets != null &&  window.getPlayerAllAssets != undefined) {
-      window.getPlayerAllAssets((data) => {
-        cocosz.web3Mgr.gold = parseInt(data[0]);
-        cocosz.web3Mgr.diamond = parseInt(data[1]);
-        if (this.isDiamond) {
-          this._label.string = data[1];
-          // this._label.string = cocosz.dataMgr.DiamondCount + "";
-        } else {
-          this._label.string = data[0];
-          // this._label.string = cocosz.dataMgr.CoinCount + "";
-        }
-      });
+    if (this.isDiamond) {
+      this._label.string = cocosz.dataMgr.DiamondCount + "";
+    } else {
+      this._label.string = cocosz.dataMgr.CoinCount + "";
     }
   }
 
