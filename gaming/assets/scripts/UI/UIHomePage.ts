@@ -414,12 +414,11 @@ export default class UIHomePage extends UIPage {
 
     switch (event.target.name) {
       case "BtnGameStart": {
-        if(window.startGame != null) {
-          window.startGame(()=>{
-            cocosz.gameMgr.gameStart(cocosz.getLevelId())
-          }, ()=>{
-            alert('Start Game Failed!');
-          });
+        const doStart = () => { cocosz.gameMgr.gameStart(cocosz.getLevelId()); };
+        if (window.startGame != null) {
+          window.startGame(doStart, doStart);
+        } else {
+          doStart();
         }
         break;
       }

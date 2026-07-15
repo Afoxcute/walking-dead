@@ -1,84 +1,48 @@
 interface Window {
-  ethereum?: any;
-  web3?: any;
   isNetworkConnected: boolean;
-  userAccount?: String;
-  onConnectButtonClick: Function;
-  onConnectedButtonClick: Function;
-  parseChainHash: (chainHash: any) => string | undefined;
-  // read function
-  getTopListInfo: (onSuccess?: (receipt: any) => void) => Promise<void>;
-  getPlayerAllAssets: (onSuccess?: (receipt: any) => void) => Promise<void>;
-  getPlayerLastLotteryResult: (onSuccess?: (receipt: any) => void) => Promise<void>;
-  getPlayerAllWeaponInfo: (onSuccess?: (receipt: any) => void) => Promise<void>;
-  getPlayerAllSkinInfo: (onSuccess?: (receipt: any) => void) => Promise<void>;
-  // write function
-  startGame: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
+  userAccount?: string;
+  onConnectButtonClick: () => void;
+  onConnectedButtonClick: () => void;
+  parseChainHash: (chainHash: unknown) => string | undefined;
+  // read functions
+  getTopListInfo: (onSuccess?: (receipt: unknown) => void) => Promise<void>;
+  getPlayerAllAssets: (onSuccess?: (receipt: unknown) => void) => Promise<void>;
+  getPlayerLastLotteryResult: (onSuccess?: (receipt: unknown) => void) => Promise<void>;
+  getPlayerAllWeaponInfo: (onSuccess?: (receipt: unknown) => void) => Promise<void>;
+  getPlayerAllSkinInfo: (onSuccess?: (receipt: unknown) => void) => Promise<void>;
+  getClaimableNative: (onSuccess?: (wei: bigint) => void) => Promise<void>;
+  // write functions
+  startGame: (onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
   gameOver: (
     time: bigint,
     kills: bigint,
-    onSuccess?: (receipt: any) => void,
-    onError?: (receipt: any) => void,
-    proofHex?: string
+    onSuccess?: (receipt: unknown) => void,
+    onError?: (receipt: unknown) => void
   ) => Promise<void>;
-  /** Native STT claimable for the connected wallet (leaderboard pull rewards). */
-  getClaimableNative: (onSuccess?: (wei: bigint) => void) => Promise<void>;
-  buyOrUpgradeSkin: (id: bigint, onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  buyOrUpgradeWeapon: (id: bigint, onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  requestLottery: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  mintGold: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  reLive: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  /** Pull accrued native (STT) leaderboard rewards to the connected wallet (#1 must call after others pay). */
-  claimNativeRewards: (onSuccess?: (receipt: any) => void, onError?: (receipt: any) => void) => Promise<void>;
-  /** Set when connected: address of gameOverVerifier (zero = no proof required). Cocos can read before gameOver. */
-  gameOverVerifierAddress?: `0x${string}`;
-  // Somnia reactivity (off-chain + on-chain)
-  /** Callback for reactivity off-chain subscription data (set by game before subscribe). */
+  buyOrUpgradeSkin: (id: bigint, onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
+  buyOrUpgradeWeapon: (id: bigint, onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
+  requestLottery: (onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
+  mintGold: (onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
+  reLive: (onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
+  claimNativeRewards: (onSuccess?: (receipt: unknown) => void, onError?: (receipt: unknown) => void) => Promise<void>;
+  // daily challenge (Devvit-backed)
+  getDailyChallenge?: (onSuccess?: (d: unknown) => void) => Promise<void>;
+  getPlayerChallengeInfo?: (onSuccess?: (d: unknown) => void) => Promise<void>;
+  completeDailyChallenge?: (kills: bigint, survivalTime: bigint, onSuccess?: (r: unknown) => void, onError?: (r: unknown) => void) => Promise<void>;
+  // reactivity stubs
   onReactivityData?: (data: unknown) => void;
-  /** Start off-chain subscription. wildcard=true = all events; false = use optional eventTopics. Returns success. */
   reactivitySubscribeOffChain?: (opts: {
     wildcard?: boolean;
     onData: (data: unknown) => void;
-    eventTopics?: `0x${string}`[];
+    eventTopics?: string[];
     onError?: (err: unknown) => void;
   }) => Promise<boolean>;
-  /** Stop the current off-chain subscription. */
   reactivityUnsubscribe?: () => void;
-  /** Create on-chain (Solidity) subscription; needs wallet with ≥32 STT. Returns tx hash or error message. */
-  reactivityCreateSoliditySubscription?: (data: {
-    handlerContractAddress: string;
-    priorityFeePerGas: bigint;
-    maxFeePerGas: bigint;
-    gasLimit: bigint;
-    isGuaranteed: boolean;
-    isCoalesced: boolean;
-    eventTopics?: `0x${string}`[];
-    emitter?: string;
-  }) => Promise<string | { error: string }>;
-  /** Get on-chain subscription info by ID. */
+  reactivityCreateSoliditySubscription?: (data: unknown) => Promise<unknown>;
   reactivityGetSubscriptionInfo?: (subscriptionId: bigint) => Promise<unknown>;
-  /** Cancel on-chain subscription (owner only). */
-  reactivityCancelSubscription?: (subscriptionId: bigint) => Promise<string | { error: string }>;
-  /** Create BlockTick system-event subscription (every block, or at blockNumber). SDK ≥0.1.9. */
-  reactivityCreateBlockTickSubscription?: (data: {
-    handlerContractAddress: string;
-    blockNumber?: bigint;
-    handlerFunctionSelector?: `0x${string}`;
-    priorityFeePerGas: bigint;
-    maxFeePerGas: bigint;
-    gasLimit: bigint;
-    isGuaranteed: boolean;
-    isCoalesced: boolean;
-  }) => Promise<string | { error: string }>;
-  /** Schedule one-off cron job at timestampMs (ms, must be ≥12s in future). SDK ≥0.1.9. */
-  reactivityScheduleCronJob?: (data: {
-    timestampMs: number | bigint;
-    handlerContractAddress: string;
-    handlerFunctionSelector?: `0x${string}`;
-    priorityFeePerGas: bigint;
-    maxFeePerGas: bigint;
-    gasLimit: bigint;
-    isGuaranteed: boolean;
-    isCoalesced: boolean;
-  }) => Promise<string | { error: string }>;
+  reactivityCancelSubscription?: (subscriptionId: bigint) => Promise<unknown>;
+  reactivityCreateBlockTickSubscription?: (data: unknown) => Promise<unknown>;
+  reactivityScheduleCronJob?: (data: unknown) => Promise<unknown>;
+  // internal
+  gameOverVerifierAddress?: string;
 }

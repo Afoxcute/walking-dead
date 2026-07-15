@@ -188,36 +188,31 @@ export default class UIOverPage extends UIPage {
     if (this._isToHome) return;
     switch (event.target.name) {
       case "BtnContinue": {
-        if (window.startGame != null && window.startGame != undefined) {
+        if (window.startGame != null) {
           window.startGame(
-            () => {
-              cocosz.gameMgr.gameStart(cocosz.dataMgr.TotoalCount_6);
-            },
-            () => {
-              alert("Start game Failed");
-            }
+            () => { cocosz.gameMgr.gameStart(cocosz.dataMgr.TotoalCount_6); },
+            () => { cocosz.gameMgr.gameStart(cocosz.dataMgr.TotoalCount_6); }
           );
+        } else {
+          cocosz.gameMgr.gameStart(cocosz.dataMgr.TotoalCount_6);
         }
         break;
       }
       case "BtnHome": {
-        if(cocosz.totalTime == 0) {
-          alert('Game is invalid!');
-          return;
-        }
-        if (window.gameOver != null && window.gameOver != undefined) {
+        const doHome = () => {
+          cocosz.sceneMgr.loadScene(scene_home, () => {
+            cocosz.uiMgr.openPage(PageName.UIHomePage);
+          });
+        };
+        if (window.gameOver != null) {
           window.gameOver(
-            BigInt(cocosz.totalTime),
+            BigInt(Math.max(1, cocosz.totalTime)),
             BigInt(cocosz.zombieKillNum),
-            () => {
-              cocosz.sceneMgr.loadScene(scene_home, () => {
-                cocosz.uiMgr.openPage(PageName.UIHomePage);
-              });
-            },
-            () => {
-              alert("End game Failed");
-            }
+            doHome,
+            doHome
           );
+        } else {
+          doHome();
         }
         break;
       }

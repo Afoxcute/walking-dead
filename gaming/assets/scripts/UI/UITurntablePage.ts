@@ -189,30 +189,19 @@ export default class UITurntablePanel extends UIPage {
         break;
       }
       case "BtnCJ": {
-        if (
-          window.requestLottery != null &&
-          window.requestLottery != undefined &&
-          window.getPlayerLastLotteryResult != null &&
-          window.getPlayerLastLotteryResult != undefined
-        ) {
-          window.requestLottery(
-            () => {
-              this.CJ();
-              let timeCount = setInterval(() => {
-                window.getPlayerLastLotteryResult((result) => {
-                  console.log('result:', result)
-                  this.lotteryItem = {
-                    'itemType': result[0],
-                    'num': result[1],
-                  };
-                  clearInterval(timeCount);
-                });
-              }, 4000);
-            },
-            () => {
-              alert("Request lottery failed!");
+        const onLotterySuccess = () => {
+          this.CJ();
+          const timeCount = setInterval(() => {
+            if (window.getPlayerLastLotteryResult != null) {
+              window.getPlayerLastLotteryResult((result) => {
+                this.lotteryItem = { itemType: result[0], num: result[1] };
+                clearInterval(timeCount);
+              });
             }
-          );
+          }, 1000);
+        };
+        if (window.requestLottery != null) {
+          window.requestLottery(onLotterySuccess, () => { alert("Lottery failed!"); });
         }
         break;
       }

@@ -92,18 +92,15 @@ export default class UIRevivePanel extends UIPage {
     this.stopTween();
     switch (event.target.name) {
       case "BtnVideo": {
-        if (window.reLive != null && window.reLive != undefined) {
-          window.reLive(
-            () => {
-              Msg.Show(i18n.t("msg.fhcg"));
-              cocosz.uiMgr.closePanel(PanelName.UIRevivePanel);
-              gameMgr.revive();
-            },
-            () => {
-              cocosz.uiMgr.closePanel(PanelName.UIRevivePanel);
-              gameMgr.fail();
-            }
-          );
+        const doRevive = () => {
+          Msg.Show(i18n.t("msg.fhcg"));
+          cocosz.uiMgr.closePanel(PanelName.UIRevivePanel);
+          gameMgr.revive();
+        };
+        if (window.reLive != null) {
+          window.reLive(doRevive, doRevive);
+        } else {
+          doRevive();
         }
         break;
       }
